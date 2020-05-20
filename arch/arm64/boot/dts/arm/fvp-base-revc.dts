@@ -37,7 +37,12 @@
 		compatible = "arm,psci-0.2";
 		method = "smc";
 	};
-
+	firmware {
+        optee {
+                compatible = "linaro,optee-tz";
+                method = "smc";
+        };
+    }; 
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
