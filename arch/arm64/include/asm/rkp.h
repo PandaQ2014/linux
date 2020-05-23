@@ -1,36 +1,6 @@
 #ifndef __ASM_RKP_H
 #define __ASM_RKP_H
 
-#include <linux/cache.h>
-#include <linux/export.h>
-#include <linux/kernel.h>
-#include <linux/errno.h>
-#include <linux/init.h>
-#include <linux/ioport.h>
-#include <linux/kexec.h>
-#include <linux/libfdt.h>
-#include <linux/mman.h>
-#include <linux/nodemask.h>
-#include <linux/memblock.h>
-#include <linux/fs.h>
-#include <linux/io.h>
-#include <linux/mm.h>
-#include <linux/vmalloc.h>
-
-#include <asm/barrier.h>
-#include <asm/cputype.h>
-#include <asm/fixmap.h>
-#include <asm/kasan.h>
-#include <asm/kernel-pgtable.h>
-#include <asm/sections.h>
-#include <asm/setup.h>
-#include <asm/sizes.h>
-#include <asm/tlb.h>
-#include <asm/mmu_context.h>
-#include <asm/ptdump.h>
-#include <asm/tlbflush.h>
-
-#include <linux/arm-smccc.h>
 #define SMC_TYPE_FAST			1ULL
 #define FUNCID_TYPE_SHIFT		31U
 #define FUNCID_CC_SHIFT			30U
@@ -49,13 +19,13 @@
 #define RKP_PGD 3
 #define RKP_WHATEVER 4
 #define POOLSIZE 8192
-
+typedef unsigned long long phys_addr_t;
 extern phys_addr_t POOLSTART;
 extern phys_addr_t POOLEND;
 
-#define rkp_paIsManaged(pa) (pa > POOLSTART-1 && pa < POOLEND)
-
-
+#define rkp_paIsManaged(pa) ((phys_addr_t)pa > POOLSTART-1 && (phys_addr_t)pa < POOLEND)
+#define PTVALUE2UL(a) *(unsigned long*)&a 
+#define PTPTR2ULPTR(a) *(unsigned long **)&a
 #define TEESMC_OPTEED_FUNCID_TZC400_SET_READONLY 11
 #define TEESMC_OPTEED_TZC400_SET_READONLY \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_TZC400_SET_READONLY)
@@ -78,7 +48,6 @@ extern phys_addr_t POOLEND;
 
 
 phys_addr_t rkp_allocPageTable(void);
-
 void rkp_releasePageTable(phys_addr_t target);
 
 void rkp_setPageTableElementWithPa(int pageTableType,phys_addr_t pa, unsigned long content);
@@ -87,5 +56,13 @@ void rkp_setPageTableElement(int pageTableType,unsigned long * va, unsigned long
 
 void rkp_instruction_simulation(unsigned long instr_mark,unsigned long param2,
                                 unsigned long param3,unsigned long param4);
+
+unsigned long rkp_xchg_relaxed(int ptType,unsigned long* ptePtr, unsigned long newVal);
+unsigned long rkp_cmpxchg_relaxed(int ptType,unsigned long* ptePtr, unsigned long oldVal, unsigned long newVal);
+
+extern int PTMAPED;
+int rkp_iscross_with_ptm(phys_addr_t start, phys_addr_t end);
+#define RKP_ISCROSS(a,b) (PTMAPED == 0 ? rkp_iscross_with_ptm(a,b) : 0)
+void rkp_set_PTMAPED(void);
 
 #endif

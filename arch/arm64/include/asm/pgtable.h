@@ -45,6 +45,7 @@
 #include <linux/mmdebug.h>
 #include <linux/mm_types.h>
 #include <linux/sched.h>
+#include <asm/rkp.h>   
 
 extern void __pte_error(const char *file, int line, unsigned long val);
 extern void __pmd_error(const char *file, int line, unsigned long val);
@@ -219,8 +220,8 @@ static inline pmd_t pmd_mkcont(pmd_t pmd)
 
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
-	WRITE_ONCE(*ptep, pte);
-
+	//WRITE_ONCE(*ptep, pte);
+	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(pte));
 	/*
 	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
 	 * or update_mmu_cache() have the necessary barriers.
@@ -462,8 +463,8 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 	}
 #endif /* __PAGETABLE_PMD_FOLDED */
 
-	WRITE_ONCE(*pmdp, pmd);
-
+	//WRITE_ONCE(*pmdp, pmd);
+	rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd));
 	if (pmd_valid(pmd))
 		dsb(ishst);
 }
@@ -522,8 +523,8 @@ static inline void set_pud(pud_t *pudp, pud_t pud)
 	}
 #endif /* __PAGETABLE_PUD_FOLDED */
 
-	WRITE_ONCE(*pudp, pud);
-
+	//WRITE_ONCE(*pudp, pud);
+	rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(pud));
 	if (pud_valid(pud))
 		dsb(ishst);
 }
@@ -581,7 +582,8 @@ static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 		return;
 	}
 
-	WRITE_ONCE(*pgdp, pgd);
+	//WRITE_ONCE(*pgdp, pgd);
+	rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(pgd));
 	dsb(ishst);
 }
 
@@ -676,12 +678,16 @@ static inline int pmdp_set_access_flags(struct vm_area_struct *vma,
 static inline int __ptep_test_and_clear_young(pte_t *ptep)
 {
 	pte_t old_pte, pte;
-
+	pteval_t * value;
 	pte = READ_ONCE(*ptep);
 	do {
+
 		old_pte = pte;
 		pte = pte_mkold(pte);
-		pte_val(pte) = cmpxchg_relaxed(&pte_val(*ptep),
+		// pte_val(pte) = cmpxchg_relaxed(&pte_val(*ptep),
+		// 			       pte_val(old_pte), pte_val(pte));
+		value =(&pte_val(*ptep));
+		pte_val(pte) = rkp_cmpxchg_relaxed(RKP_PTE,PTPTR2ULPTR(value),
 					       pte_val(old_pte), pte_val(pte));
 	} while (pte_val(pte) != pte_val(old_pte));
 
@@ -730,7 +736,9 @@ static inline int pmdp_test_and_clear_young(struct vm_area_struct *vma,
 static inline pte_t ptep_get_and_clear(struct mm_struct *mm,
 				       unsigned long address, pte_t *ptep)
 {
-	return __pte(xchg_relaxed(&pte_val(*ptep), 0));
+	pteval_t * value = (&pte_val(*ptep));
+	//return __pte(xchg_relaxed(&pte_val(*ptep), 0));
+	return __pte(rkp_xchg_relaxed(RKP_PTE,PTPTR2ULPTR(value), 0));
 }
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
@@ -750,7 +758,7 @@ static inline pmd_t pmdp_huge_get_and_clear(struct mm_struct *mm,
 static inline void ptep_set_wrprotect(struct mm_struct *mm, unsigned long address, pte_t *ptep)
 {
 	pte_t old_pte, pte;
-
+	pteval_t * value;
 	pte = READ_ONCE(*ptep);
 	do {
 		old_pte = pte;
@@ -761,7 +769,10 @@ static inline void ptep_set_wrprotect(struct mm_struct *mm, unsigned long addres
 		if (pte_hw_dirty(pte))
 			pte = pte_mkdirty(pte);
 		pte = pte_wrprotect(pte);
-		pte_val(pte) = cmpxchg_relaxed(&pte_val(*ptep),
+		// pte_val(pte) = cmpxchg_relaxed(&pte_val(*ptep),
+		// 			       pte_val(old_pte), pte_val(pte));
+		value = (&pte_val(*ptep));
+		pte_val(pte) = rkp_cmpxchg_relaxed(RKP_PTE,PTPTR2ULPTR(value),
 					       pte_val(old_pte), pte_val(pte));
 	} while (pte_val(pte) != pte_val(old_pte));
 }
@@ -778,7 +789,9 @@ static inline void pmdp_set_wrprotect(struct mm_struct *mm,
 static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
 		unsigned long address, pmd_t *pmdp, pmd_t pmd)
 {
-	return __pmd(xchg_relaxed(&pmd_val(*pmdp), pmd_val(pmd)));
+	pmdval_t * value = (&pmd_val(*pmdp));
+	//return __pmd(xchg_relaxed(&pmd_val(*pmdp), pmd_val(pmd)));
+	return __pmd(rkp_xchg_relaxed(RKP_PMD,PTPTR2ULPTR(value), pmd_val(pmd)));
 }
 #endif
 

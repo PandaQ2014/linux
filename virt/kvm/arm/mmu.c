@@ -31,7 +31,7 @@
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
-
+#include <asm/rkp.h>
 #include "trace.h"
 
 static pgd_t *boot_hyp_pgd;
@@ -63,11 +63,13 @@ static bool memslot_is_logging(struct kvm_memory_slot *memslot)
  */
 void kvm_flush_remote_tlbs(struct kvm *kvm)
 {
+	pr_err("kvm_call_hyp kvm_flush_remote_tlbs");
 	kvm_call_hyp(__kvm_tlb_flush_vmid, kvm);
 }
 
 static void kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 {
+	pr_err("kvm_call_hyp kvm_tlb_flush_vmid_ipa");
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, kvm, ipa);
 }
 
@@ -195,14 +197,16 @@ static void clear_stage2_pmd_entry(struct kvm *kvm, pmd_t *pmd, phys_addr_t addr
 
 static inline void kvm_set_pte(pte_t *ptep, pte_t new_pte)
 {
-	WRITE_ONCE(*ptep, new_pte);
-	dsb(ishst);
+	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(new_pte));
+	// WRITE_ONCE(*ptep, new_pte);
+	// dsb(ishst);
 }
 
 static inline void kvm_set_pmd(pmd_t *pmdp, pmd_t new_pmd)
 {
-	WRITE_ONCE(*pmdp, new_pmd);
-	dsb(ishst);
+	rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(new_pmd));
+	// WRITE_ONCE(*pmdp, new_pmd);
+	// dsb(ishst);
 }
 
 static inline void kvm_pmd_populate(pmd_t *pmdp, pte_t *ptep)
@@ -212,14 +216,18 @@ static inline void kvm_pmd_populate(pmd_t *pmdp, pte_t *ptep)
 
 static inline void kvm_pud_populate(pud_t *pudp, pmd_t *pmdp)
 {
-	WRITE_ONCE(*pudp, kvm_mk_pud(pmdp));
-	dsb(ishst);
+	pud_t value =  kvm_mk_pud(pmdp);
+	rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(value));
+	// WRITE_ONCE(*pudp, kvm_mk_pud(pmdp));
+	// dsb(ishst);
 }
 
 static inline void kvm_pgd_populate(pgd_t *pgdp, pud_t *pudp)
 {
-	WRITE_ONCE(*pgdp, kvm_mk_pgd(pudp));
-	dsb(ishst);
+	pgd_t value =  kvm_mk_pgd(pudp);
+	rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(value));
+	// WRITE_ONCE(*pgdp, kvm_mk_pgd(pudp));
+	// dsb(ishst);
 }
 
 /*
