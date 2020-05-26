@@ -48,7 +48,7 @@
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
 #include <asm/traps.h>
-
+#include <asm/rkp.h>
 struct fault_info {
 	int	(*fn)(unsigned long addr, unsigned int esr,
 		      struct pt_regs *regs);
@@ -303,8 +303,13 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 		return;
 
 	if (is_el1_permission_fault(addr, esr, regs)) {
-		if (esr & ESR_ELx_WNR)
+		if (esr & ESR_ELx_WNR){
+			phys_addr_t pa = virt_to_phys((void *)addr);
+			if(rkp_paIsManaged(pa)){
+				pr_err("wirte to read only address pa: 0x%016llx pc: 0x%08x",pa,**(unsigned int **)&(regs->user_regs.pc));
+			}
 			msg = "write to read-only memory";
+		}
 		else
 			msg = "read from unreadable memory";
 	} else if (addr < PAGE_SIZE) {

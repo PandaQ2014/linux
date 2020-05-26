@@ -45,6 +45,15 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_RKP_INSTR_SIMULATION 24
 #define TEESMC_OPTEED_RKP_INSTR_SIMULATION \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_INSTR_SIMULATION)
+#define TEESMC_OPTEED_FUNCID_RKP_CLEAR_PAGE 25
+#define TEESMC_OPTEED_RKP_CLEAR_PAGE \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_CLEAR_PAGE)
+#define TEESMC_OPTEED_FUNCID_RKP_COPY_PAG 26
+#define TEESMC_OPTEED_RKP_COPY_PAGE \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_COPY_PAG)
+
+
+
 
 
 phys_addr_t rkp_allocPageTable(void);
@@ -64,5 +73,16 @@ extern int PTMAPED;
 int rkp_iscross_with_ptm(phys_addr_t start, phys_addr_t end);
 #define RKP_ISCROSS(a,b) (PTMAPED == 0 ? rkp_iscross_with_ptm(a,b) : 0)
 void rkp_set_PTMAPED(void);
+
+void rkp_clear_page(void * kaddr);
+unsigned long rkp_copy_page(void *kto,const void* kfrom, unsigned long n);
+
+int rkp_pa_is_managed(phys_addr_t pa);
+
+
+
+
+
+
 
 #endif

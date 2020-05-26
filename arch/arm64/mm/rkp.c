@@ -12,6 +12,7 @@
 #include <linux/memblock.h>
 #include <linux/spinlock_types.h>
 #include <linux/arm-smccc.h>
+#include <linux/module.h>
 static int INITED = 0;
 static DEFINE_SPINLOCK(xchg_spin_lock);
 phys_addr_t POOLSTART = 0; //初始值保证rkp_paIsManaged宏在RKP未初始化前始终返回false
@@ -122,3 +123,28 @@ void rkp_set_PTMAPED(void){
     PTMAPED = 1;
     pr_err("0x00000008feffe000 : 0x%016llx",*ptr);
 }
+void rkp_clear_page(void * kaddr){
+    struct arm_smccc_res res;
+    unsigned long long pa = virt_to_phys(kaddr);
+    //memset(&res, 0, sizeof(res));
+    arm_smccc_smc(TEESMC_OPTEED_RKP_CLEAR_PAGE, pa, 0, 0, 0, 0, 0, 0, &res);
+    return;
+}
+unsigned long rkp_copy_page(void *kto,const void*kfrom, unsigned long n){
+    struct arm_smccc_res res;
+    memset(&res, 0, sizeof(res));
+    unsigned long long pa_to;
+    unsigned long long pa_from;
+    pa_to = virt_to_phys(kto);
+    pa_from = virt_to_phys(kfrom);
+    //memset(&res, 0, sizeof(res));
+    arm_smccc_smc(TEESMC_OPTEED_RKP_COPY_PAGE, pa_to, pa_from, n, 0, 0, 0, 0, &res);
+    return res.a1;
+}
+int rkp_pa_is_managed(phys_addr_t pa)
+{
+	return ((phys_addr_t)pa > POOLSTART-1 && (phys_addr_t)pa < POOLEND);
+}
+
+EXPORT_SYMBOL(rkp_copy_page);
+EXPORT_SYMBOL(rkp_pa_is_managed);

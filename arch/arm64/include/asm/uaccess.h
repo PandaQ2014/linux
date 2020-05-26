@@ -21,7 +21,7 @@
 #include <asm/alternative.h>
 #include <asm/kernel-pgtable.h>
 #include <asm/sysreg.h>
-
+#include <asm/rkp.h>
 /*
  * User space memory access functions
  */
@@ -223,7 +223,13 @@ static inline void uaccess_enable_not_uao(void)
 {
 	__uaccess_enable(ARM64_ALT_PAN_NOT_UAO);
 }
-
+static unsigned long __rkp_copy_page(void *kto,const void*kfrom, unsigned long n){
+	return rkp_copy_page(kto,kfrom,n);
+}
+static int __rkp_pa_is_managed(phys_addr_t pa)
+{
+	return rkp_pa_is_managed(pa);
+}
 /*
  * Sanitise a uaccess pointer such that it becomes NULL if above the
  * current addr_limit.
@@ -383,7 +389,7 @@ do {									\
 extern unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n);
 #define raw_copy_from_user(to, from, n)					\
 ({									\
-	__arch_copy_from_user((to), __uaccess_mask_ptr(from), (n));	\
+	__rkp_pa_is_managed(virt_to_phys(to)) ? __rkp_copy_page(to,from,n) : __arch_copy_from_user((to), __uaccess_mask_ptr(from), (n));	\
 })
 
 extern unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n);

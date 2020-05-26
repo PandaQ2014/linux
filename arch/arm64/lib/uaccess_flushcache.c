@@ -17,7 +17,7 @@
 #include <linux/uaccess.h>
 #include <asm/barrier.h>
 #include <asm/cacheflush.h>
-
+#include <asm/rkp.h>
 void memcpy_flushcache(void *dst, const void *src, size_t cnt)
 {
 	/*
@@ -39,7 +39,12 @@ void memcpy_page_flushcache(char *to, struct page *page, size_t offset,
 unsigned long __copy_user_flushcache(void *to, const void __user *from,
 				     unsigned long n)
 {
-	unsigned long rc = __arch_copy_from_user(to, from, n);
+	unsigned long rc;
+	if(rkp_paIsManaged(virt_to_phys(to))){
+		rc = rkp_copy_page(to,from,n);
+	}else{
+		rc = __arch_copy_from_user(to, from, n);
+	}
 
 	/* See above */
 	__clean_dcache_area_pop(to, n - rc);
