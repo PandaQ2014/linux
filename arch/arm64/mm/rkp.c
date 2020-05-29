@@ -15,6 +15,7 @@
 #include <linux/module.h>
 static int INITED = 0;
 static DEFINE_SPINLOCK(xchg_spin_lock);
+static DEFINE_SPINLOCK(ptmanager_spin_lock);
 phys_addr_t POOLSTART = 0; //初始值保证rkp_paIsManaged宏在RKP未初始化前始终返回false
 phys_addr_t POOLEND = 0;
 
@@ -34,8 +35,14 @@ phys_addr_t rkp_allocPageTable(void){
         INITED = 1;
     }
 
-    memset(&res, 0, sizeof(res));
-    arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_GETAPT, 0, 0, 0, 0, 0, 0, 0, &res);
+    if(PTMAPED == 0){
+        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_GETAPT, 0, 0, 0, 0, 0, 0, 0, &res);
+    }else{
+        spin_lock(&ptmanager_spin_lock);
+        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_GETAPT, 0, 0, 0, 0, 0, 0, 0, &res);
+        spin_unlock(&ptmanager_spin_lock);
+    }
+   
     if(res.a0 != 0){
         pr_err("TEESMC_OPTEED_RKP_PTM_GETAPT failed");
         return 0;
@@ -45,7 +52,13 @@ phys_addr_t rkp_allocPageTable(void){
 void rkp_releasePageTable(phys_addr_t target){
     struct arm_smccc_res res;
     // memset(&res, 0, sizeof(res));
-    arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_RELEASEAPT, target, 0, 0, 0, 0, 0, 0, &res);
+    if(PTMAPED == 0){
+        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_RELEASEAPT, target, 0, 0, 0, 0, 0, 0, &res);
+    }else{
+        spin_lock(&ptmanager_spin_lock);
+        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_RELEASEAPT, target, 0, 0, 0, 0, 0, 0, &res);
+        spin_unlock(&ptmanager_spin_lock);
+    }
     // if(res.a0 != 0){
     //     pr_err("TEESMC_OPTEED_RKP_PTM_RELEASEAPT failed");
     //     return;
@@ -58,6 +71,7 @@ void rkp_setPageTableElementWithPa(int pageTableType,phys_addr_t pa, unsigned lo
     //memset(&res, 0, sizeof(res));
     //pr_err("set pt on 0x%016llx!!!!!!!",pa);
     arm_smccc_smc(TEESMC_OPTEED_RKP_SET_PAGETABLE, pageTableType, pa, content, 0, 0, 0, 0, &res);
+    dsb(ishst);
     // if(res.a0 != 0){
     //     pr_err("TEESMC_OPTEED_RKP_SET_PAGETABLE failed");
     //     return;
@@ -75,6 +89,7 @@ void rkp_setPageTableElement(int pageTableType,unsigned long * va, unsigned long
     }
     //memset(&res, 0, sizeof(res));
     arm_smccc_smc(TEESMC_OPTEED_RKP_SET_PAGETABLE, pageTableType, pa, content, 0, 0, 0, 0, &res);
+    dsb(ishst);
     // if(res.a0 != 0){
     //     pr_err("TEESMC_OPTEED_RKP_SET_PAGETABLE failed");
     //     return;
@@ -132,7 +147,6 @@ void rkp_clear_page(void * kaddr){
 }
 unsigned long rkp_copy_page(void *kto,const void*kfrom, unsigned long n){
     struct arm_smccc_res res;
-    memset(&res, 0, sizeof(res));
     unsigned long long pa_to;
     unsigned long long pa_from;
     pa_to = virt_to_phys(kto);
@@ -145,6 +159,13 @@ int rkp_pa_is_managed(phys_addr_t pa)
 {
 	return ((phys_addr_t)pa > POOLSTART-1 && (phys_addr_t)pa < POOLEND);
 }
+void* rkp_mem_set(void * buffer, int c, unsigned long n){
+    struct arm_smccc_res res;
+    unsigned long pa_buffer = (unsigned long) virt_to_phys(buffer);
+    arm_smccc_smc(TEESMC_OPTEED_RKP_MEM_SET, pa_buffer, c, n, 0, 0, 0, 0, &res);
+    return (void *)res.a1;
+}
 
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
+EXPORT_SYMBOL(rkp_mem_set);

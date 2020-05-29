@@ -243,7 +243,8 @@ int ptep_set_access_flags(struct vm_area_struct *vma,
 		pteval ^= PTE_RDONLY;
 		pteval |= pte_val(entry);
 		pteval ^= PTE_RDONLY;
-		pteval = cmpxchg_relaxed(&pte_val(*ptep), old_pteval, pteval);
+		//pteval = cmpxchg_relaxed(&pte_val(*ptep), old_pteval, pteval);
+		rkp_cmpxchg_relaxed(RKP_PTE,PTPTR2ULPTR(ptep), PTVALUE2UL(old_pteval), PTVALUE2UL(pteval));
 	} while (pteval != old_pteval);
 
 	flush_tlb_fix_spurious_fault(vma, address);
@@ -306,7 +307,27 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 		if (esr & ESR_ELx_WNR){
 			phys_addr_t pa = virt_to_phys((void *)addr);
 			if(rkp_paIsManaged(pa)){
+				// if(((**(unsigned int **)&(regs->user_regs.pc)) & 0xFFE00C00) == 0xF8000400) //STR(immmediate)
+				// {
+				// 	unsigned int rt = (**(unsigned int **)&(regs->user_regs.pc)) & 0x1F;
+				// 	unsigned int rn = ((**(unsigned int **)&(regs->user_regs.pc)) & 0x3E0)>>5;
+				// 	unsigned int imm9 = ((**(unsigned int **)&(regs->user_regs.pc)) & 0x1FF000)>>12;
+				// 	rkp_instruction_simulation(RKP_INS_SIM_STR_IMM_64,virt_to_phys(regs->user_regs.regs[rn]),regs->user_regs.regs[rt],0);
+				// 	regs->user_regs.regs[rn]+=(regs->user_regs.regs[imm9]);
+				// 	regs->user_regs.pc+=4;
+				// 	return;
+				// }else if(((**(unsigned int **)&(regs->user_regs.pc)) & 0xFFE00C00) == 0xB8000400) //STR(immmediate)
+				// {
+				// 	unsigned int rt = (**(unsigned int **)&(regs->user_regs.pc)) & 0x1F;
+				// 	unsigned int rn = ((**(unsigned int **)&(regs->user_regs.pc)) & 0x3E0)>>5;
+				// 	unsigned int imm9 = ((**(unsigned int **)&(regs->user_regs.pc)) & 0x1FF000)>>12;
+				// 	rkp_instruction_simulation(RKP_INS_SIM_STR_IMM_32,virt_to_phys(regs->user_regs.regs[rn]),regs->user_regs.regs[rt],0);
+				// 	regs->user_regs.regs[rn]+=(regs->user_regs.regs[imm9]);
+				// 	regs->user_regs.pc+=4;
+				// 	return;
+				// }
 				pr_err("wirte to read only address pa: 0x%016llx pc: 0x%08x",pa,**(unsigned int **)&(regs->user_regs.pc));
+
 			}
 			msg = "write to read-only memory";
 		}

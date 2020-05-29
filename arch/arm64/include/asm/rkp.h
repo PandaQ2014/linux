@@ -51,7 +51,9 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_RKP_COPY_PAG 26
 #define TEESMC_OPTEED_RKP_COPY_PAGE \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_COPY_PAG)
-
+#define TEESMC_OPTEED_FUNCID_RKP_MEM_SET 27
+#define TEESMC_OPTEED_RKP_MEM_SET \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_MEM_SET)
 
 
 
@@ -79,6 +81,7 @@ unsigned long rkp_copy_page(void *kto,const void* kfrom, unsigned long n);
 
 int rkp_pa_is_managed(phys_addr_t pa);
 
+void* rkp_mem_set(void *, int, unsigned long);
 
 
 
