@@ -223,8 +223,23 @@ static inline void uaccess_enable_not_uao(void)
 {
 	__uaccess_enable(ARM64_ALT_PAN_NOT_UAO);
 }
-static unsigned long __rkp_copy_page(void *kto,const void*kfrom, unsigned long n){
-	return rkp_copy_page(kto,kfrom,n);
+static void __rkp_cfu_patch_on(void){
+	rkp_copy_from_user_patch_on();
+}
+static void __rkp_cfu_patch_off(void){
+	rkp_copy_from_user_patch_off();
+}
+
+static unsigned long  __rkp_patch_arch_copy_from_user(unsigned long (*cfu)(void *to, const void __user *from, unsigned long n), void *to, const void __user *from, unsigned long n){
+	unsigned long res;
+	__rkp_cfu_patch_on();
+	//to - to+n 跨了几页
+	//查虚拟地址to的页表项，把只读标志位置位可写
+	res = cfu((to), from, (n));
+	//恢复
+	__rkp_cfu_patch_off();
+	return res;
+
 }
 static int __rkp_pa_is_managed(phys_addr_t pa)
 {
@@ -389,7 +404,7 @@ do {									\
 extern unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n);
 #define raw_copy_from_user(to, from, n)					\
 ({									\
-	__rkp_pa_is_managed(virt_to_phys(to)) ? __rkp_copy_page(to,from,n) : __arch_copy_from_user((to), __uaccess_mask_ptr(from), (n));	\
+	__rkp_pa_is_managed(virt_to_phys((to))) ? __rkp_patch_arch_copy_from_user(__arch_copy_from_user,(to), __uaccess_mask_ptr(from), (n)) : __arch_copy_from_user((to), __uaccess_mask_ptr(from), (n));	\
 })
 
 extern unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n);

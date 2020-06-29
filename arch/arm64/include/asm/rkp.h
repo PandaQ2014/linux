@@ -54,6 +54,9 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_RKP_MEM_SET 27
 #define TEESMC_OPTEED_RKP_MEM_SET \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_MEM_SET)
+#define TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH 28
+#define TEESMC_OPTEED_RKP_CFU_PATCH \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH)
 
 
 
@@ -83,8 +86,9 @@ int rkp_pa_is_managed(phys_addr_t pa);
 
 void* rkp_mem_set(void *, int, unsigned long);
 
+void rkp_copy_from_user_patch_on(void);
 
-
+void rkp_copy_from_user_patch_off(void);
 
 
 

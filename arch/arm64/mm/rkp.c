@@ -16,6 +16,7 @@
 static int INITED = 0;
 static DEFINE_SPINLOCK(xchg_spin_lock);
 static DEFINE_SPINLOCK(ptmanager_spin_lock);
+static DEFINE_SPINLOCK(cfu_patch_spin_lock);
 phys_addr_t POOLSTART = 0; //初始值保证rkp_paIsManaged宏在RKP未初始化前始终返回false
 phys_addr_t POOLEND = 0;
 
@@ -165,7 +166,22 @@ void* rkp_mem_set(void * buffer, int c, unsigned long n){
     arm_smccc_smc(TEESMC_OPTEED_RKP_MEM_SET, pa_buffer, c, n, 0, 0, 0, 0, &res);
     return (void *)res.a1;
 }
+void rkp_copy_from_user_patch_on(){
+        struct arm_smccc_res res;
+        spin_lock(&cfu_patch_spin_lock);
+        arm_smccc_smc(TEESMC_OPTEED_RKP_CFU_PATCH, 1, 0, 0, 0, 0, 0, 0, &res);
+        spin_unlock(&cfu_patch_spin_lock);
+}
+
+void rkp_copy_from_user_patch_off(){
+        struct arm_smccc_res res;
+        spin_lock(&cfu_patch_spin_lock);
+        arm_smccc_smc(TEESMC_OPTEED_RKP_CFU_PATCH, 0, 0, 0, 0, 0, 0, 0, &res);
+        spin_unlock(&cfu_patch_spin_lock);
+}
 
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
 EXPORT_SYMBOL(rkp_mem_set);
+EXPORT_SYMBOL(rkp_copy_from_user_patch_on);
+EXPORT_SYMBOL(rkp_copy_from_user_patch_off);
