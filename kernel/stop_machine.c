@@ -91,6 +91,8 @@ static bool cpu_stop_queue_work(unsigned int cpu, struct cpu_stop_work *work)
 	raw_spin_unlock_irqrestore(&stopper->lock, flags);
 
 	wake_up_q(&wakeq);
+	u32 pc = READ_ONCE(current_thread_info()->preempt.count);
+	pr_info("cpu_stop_queue_work | preempt.count: %d", pc);
 	preempt_enable();
 
 	return enabled;
@@ -368,6 +370,19 @@ static bool queue_stop_cpus_work(const struct cpumask *cpumask,
 	unsigned int cpu;
 	bool queued = false;
 
+	// preempt_disable();
+	// pr_info("queue_stop_cpus_work | test");
+	// unsigned long pa = 0x00000008fffd8000;
+	// unsigned long va = pa + 0xffff7fff80000000;
+	// int r;
+	// for (r=0; r<1; r++) {
+	// 	WRITE_ONCE(*(unsigned long *)va, r);
+	// 	va += 32;
+	// }
+	// panic("debug");
+	// preempt_enable();
+	// panic("debug");
+
 	/*
 	 * Disable preemption while queueing to avoid getting
 	 * preempted by a stopper which might wait for other stoppers
@@ -380,11 +395,21 @@ static bool queue_stop_cpus_work(const struct cpumask *cpumask,
 		work->fn = fn;
 		work->arg = arg;
 		work->done = done;
+		// preempt_enable();
+		// panic("debug");  // tzc没有报
 		if (cpu_stop_queue_work(cpu, work))
 			queued = true;
+		// preempt_disable();
+		// panic("debug");  //tzc没有报
 	}
+	// preempt_enable();
+	// panic("debug");  // tzc报出拦截安全内存写操作
 	stop_cpus_in_progress = false;
+	// panic("debug");
+	u32 pc = READ_ONCE(current_thread_info()->preempt.count);
+	pr_info("queue_stop_cpus_work | preempt.count: %d", pc);
 	preempt_enable();
+	// panic("debug");  //tzc报
 
 	return queued;
 }
@@ -534,6 +559,7 @@ extern void sched_set_stop_task(int cpu, struct task_struct *stop);
 
 static void cpu_stop_create(unsigned int cpu)
 {
+	pr_info("cpu_stop_create |");
 	sched_set_stop_task(cpu, per_cpu(cpu_stopper.thread, cpu));
 }
 

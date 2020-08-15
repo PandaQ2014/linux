@@ -90,6 +90,8 @@ void rkp_copy_from_user_patch_on(void);
 
 void rkp_copy_from_user_patch_off(void);
 
+unsigned long  rkp_patch_arch_copy_from_user(unsigned long (*cfu)(void *to, const void __user *from, unsigned long n), void *to, const void __user *from, unsigned long n);
 
+unsigned long  rkp_patch_arch_copy_from_user_impl(unsigned long (*cfu)(void *to, const void __user *from, unsigned long n), void *to, const void __user *from, unsigned long n);
 
 #endif

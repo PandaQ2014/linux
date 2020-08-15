@@ -223,28 +223,22 @@ static inline void uaccess_enable_not_uao(void)
 {
 	__uaccess_enable(ARM64_ALT_PAN_NOT_UAO);
 }
-static void __rkp_cfu_patch_on(void){
-	rkp_copy_from_user_patch_on();
-}
-static void __rkp_cfu_patch_off(void){
-	rkp_copy_from_user_patch_off();
-}
+// static void __rkp_cfu_patch_on(void){
+// 	rkp_copy_from_user_patch_on();
+// }
+// static void __rkp_cfu_patch_off(void){
+// 	rkp_copy_from_user_patch_off();
+// }
 
 static unsigned long  __rkp_patch_arch_copy_from_user(unsigned long (*cfu)(void *to, const void __user *from, unsigned long n), void *to, const void __user *from, unsigned long n){
-	unsigned long res;
-	__rkp_cfu_patch_on();
-	//to - to+n 跨了几页
-	//查虚拟地址to的页表项，把只读标志位置位可写
-	res = cfu((to), from, (n));
-	//恢复
-	__rkp_cfu_patch_off();
-	return res;
-
+	return rkp_patch_arch_copy_from_user_impl(cfu, to, from, n);
 }
+
 static int __rkp_pa_is_managed(phys_addr_t pa)
 {
 	return rkp_pa_is_managed(pa);
 }
+
 /*
  * Sanitise a uaccess pointer such that it becomes NULL if above the
  * current addr_limit.

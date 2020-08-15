@@ -168,6 +168,7 @@ static int pud_set_huge_pa(pud_t *pudp_pa,pud_t *pudp, phys_addr_t phys, pgprot_
 	pr_err("pud_set_huge_pa");
 		}
 	}
+	pr_info("pud_set_huge_pa | ");
 	rkp_setPageTableElementWithPa(RKP_PUD,(phys_addr_t)pudp_pa,PTVALUE2UL(new_pud));
 	return 1;
 }
@@ -183,6 +184,7 @@ static int pmd_set_huge_pa(pmd_t *pmdp_pa,pmd_t *pmdp, phys_addr_t phys, pgprot_
 
 	BUG_ON(phys & ~PMD_MASK);
 	//set_pmd(pmdp, new_pmd);//v2
+	pr_info("pmd_set_huge_pa | ");
 	rkp_setPageTableElementWithPa(RKP_PMD,(phys_addr_t)pmdp_pa,PTVALUE2UL(new_pmd));
 	return 1;
 }
@@ -219,15 +221,20 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 	ptep_pa = (pte_t *)pte_offset_phys(pmdp, addr);
 	do {
 		pte_t old_pte = READ_ONCE(*ptep);
-		// if(rkp_paIsManaged(phys)){
-		// 	pr_err("rkp_paIsManaged 0x%016llx",phys); 
-		// 	rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
-		// 	//PAGE_KERNEL_RO PAGE_HYP_RO
-		// }else{
-		// 	//set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
-		// 	rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
-		// }
-		rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
+		if(rkp_paIsManaged(phys)){
+			// pr_err("init_pte | rkp_paIsManaged 0x%016llx",phys); 
+			// pr_err("init_pte | ptep_pa: 0x%016llx, ptep: 0x%016llx, phys: 0x%016llx, addr: 0x%016llx, end: 0x%016llx, prot: 0x%016llx", ptep_pa,  ptep, phys, addr, end, pgprot_val(prot));
+			// unsigned long rkp_prot = (pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO);
+			// pr_info("init_pte | prot: 0x%016llx, rkp_prot: 0x%016llx, rkp_pte: 0x%016llx", pgprot_val(prot), rkp_prot, *(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
+			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
+			//PAGE_KERNEL_RO PAGE_HYP_RO
+		}else{
+			//set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
+			// pr_info("init_pte | rkp_paNotManaged 0x%016llx", phys);
+			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
+		}
+		// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
+
 		/*
 		 * After the PTE entry has been populated once, we
 		 * only allow updates to the permission attributes.
@@ -290,7 +297,7 @@ static void alloc_init_cont_pte_pa(pmd_t *pmdp_pa,pmd_t *pmdp, unsigned long add
 		phys_addr_t pte_phys;
 		BUG_ON(!pgtable_alloc);
 		pte_phys = pgtable_alloc();
-		pr_err("pageinit:0x%016llx alloc_init_cont_pte_pa",(unsigned long long)pte_phys);
+		// pr_err("pageinit:0x%016llx alloc_init_cont_pte_pa",(unsigned long long)pte_phys);
 		if(PTMAPED == 1){
 			rkp_set_PTMAPED();
 		}
@@ -310,6 +317,7 @@ static void alloc_init_cont_pte_pa(pmd_t *pmdp_pa,pmd_t *pmdp, unsigned long add
 		    (flags & NO_CONT_MAPPINGS) == 0)
 			__prot = __pgprot(pgprot_val(prot) | PTE_CONT);
 
+		// pr_info("alloc_init_cont_pte_pa | will enter init_pte");
 		init_pte(pmdp, addr, next, phys, __prot);
 
 		phys += next - addr;
@@ -459,7 +467,7 @@ static void alloc_init_pud(pgd_t *pgdp, unsigned long addr, unsigned long end,
 		phys_addr_t pud_phys;
 		BUG_ON(!pgtable_alloc);
 		pud_phys = pgtable_alloc();
-		pr_err("pageinit:0x%016llx alloc_init_pud",(unsigned long long)pud_phys);
+		pr_err("pageinit:0x%016llx alloc_init_pud pud_phys",(unsigned long long)pud_phys);
 		__pgd_populate(pgdp, pud_phys, PUD_TYPE_TABLE);
 		pgd = READ_ONCE(*pgdp);
 	}
@@ -467,6 +475,7 @@ static void alloc_init_pud(pgd_t *pgdp, unsigned long addr, unsigned long end,
 
 	pudp = pud_set_fixmap_offset(pgdp, addr);
 	pudp_pa = (pud_t *)pud_offset_phys(pgdp, addr);
+	pr_err("pageinit:0x%016llx alloc_init_pud pudp_pa",(unsigned long long)pudp_pa);
 	do {
 		pud_t old_pud = READ_ONCE(*pudp);
 
@@ -777,14 +786,19 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * Only rodata will be remapped with different permissions later on,
 	 * all other segments are allowed to use contiguous mappings.
 	 */
+	pr_info("map _text");
 	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
+	pr_info("map __start_rodata");
 	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
 			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
+	pr_info("map __inittext_begin");
 	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
 			   &vmlinux_inittext, 0, VM_NO_GUARD);
+	pr_info("map __initdata_begin");
 	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
 			   &vmlinux_initdata, 0, VM_NO_GUARD);
+	pr_info("map _data");
 	map_kernel_segment(pgdp, _data, _end, PAGE_KERNEL, &vmlinux_data, 0, 0);
 
 	if (!READ_ONCE(pgd_val(*pgd_offset_raw(pgdp, FIXADDR_START)))) {
@@ -816,24 +830,32 @@ static void __init map_kernel(pgd_t *pgdp)
 
 void __init paging_init(void)
 {
+	pr_err("paging_init start!");
 	pgd_t *pgdp = pgd_set_fixmap(__pa_symbol(swapper_pg_dir));
 
-	
+	pr_err("map_kernel start!");
 	map_kernel(pgdp);
 	pr_err("map_kernel finished!");
+
+	pr_err("map_mem start!");
 	map_mem(pgdp);
 	pr_err("map_mem finished!");
+
+	pr_err("pgd_clear_fixmap start!");
 	pgd_clear_fixmap();
 	pr_err("pgd_clear_fixmap finished!");
+
+	pr_err("cpu_replace_ttbr1 start!");
 	cpu_replace_ttbr1(lm_alias(swapper_pg_dir));
 	init_mm.pgd = swapper_pg_dir;
 	pr_err("cpu_replace_ttbr1 finished!");
+
 	pr_err("memblock_free 0x%016llx-0x%016llx",__pa_symbol(init_pg_dir),__pa_symbol(init_pg_end) - __pa_symbol(init_pg_dir));
 	memblock_free(__pa_symbol(init_pg_dir),
 		      __pa_symbol(init_pg_end) - __pa_symbol(init_pg_dir));
 	memblock_allow_resize();
 	rkp_set_PTMAPED();
-	pr_err("paging finished!");
+	pr_err("paging_init finished!");
 }
 
 /*
