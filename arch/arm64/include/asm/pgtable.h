@@ -463,8 +463,8 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 	}
 #endif /* __PAGETABLE_PMD_FOLDED */
 
-	//WRITE_ONCE(*pmdp, pmd);
-	rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd));
+	WRITE_ONCE(*pmdp, pmd);
+	// rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd));
 	if (pmd_valid(pmd))
 		dsb(ishst);
 }
@@ -523,8 +523,8 @@ static inline void set_pud(pud_t *pudp, pud_t pud)
 	}
 #endif /* __PAGETABLE_PUD_FOLDED */
 
-	//WRITE_ONCE(*pudp, pud);
-	rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(pud));
+	WRITE_ONCE(*pudp, pud);
+	// rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(pud));
 	if (pud_valid(pud))
 		dsb(ishst);
 }
@@ -582,8 +582,8 @@ static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 		return;
 	}
 
-	//WRITE_ONCE(*pgdp, pgd);
-	rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(pgd));
+	WRITE_ONCE(*pgdp, pgd);
+	// rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(pgd));
 	dsb(ishst);
 }
 

@@ -562,7 +562,6 @@ void __init setup_nr_cpu_ids(void)
 /* Called by boot processor to activate the rest. */
 void __init smp_init(void)
 {
-	pr_info("smp_init start");
 	int num_nodes, num_cpus;
 	unsigned int cpu;
 

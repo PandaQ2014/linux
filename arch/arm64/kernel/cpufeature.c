@@ -1723,7 +1723,7 @@ static int cpu_enable_non_boot_scope_capabilities(void *__unused)
  * Run through the enabled capabilities and enable() it on all active
  * CPUs
  */
-static void __init enable_cpu_capabilities(u16 scope_mask, int debug)
+static void __init enable_cpu_capabilities(u16 scope_mask)
 {
 	int i;
 	const struct arm64_cpu_capabilities *caps;
@@ -1924,7 +1924,7 @@ static void __init setup_boot_cpu_capabilities(void)
 	/* Detect capabilities with either SCOPE_BOOT_CPU or SCOPE_LOCAL_CPU */
 	update_cpu_capabilities(SCOPE_BOOT_CPU | SCOPE_LOCAL_CPU);
 	/* Enable the SCOPE_BOOT_CPU capabilities alone right away */
-	enable_cpu_capabilities(SCOPE_BOOT_CPU, 0);
+	enable_cpu_capabilities(SCOPE_BOOT_CPU);
 }
 
 DEFINE_STATIC_KEY_FALSE(arm64_const_caps_ready);
@@ -1956,7 +1956,7 @@ static void __init setup_system_capabilities(void)
 	 * that are not enabled already.
 	 */
 	update_cpu_capabilities(SCOPE_SYSTEM);
-	enable_cpu_capabilities(SCOPE_ALL & ~SCOPE_BOOT_CPU, 1);
+	enable_cpu_capabilities(SCOPE_ALL & ~SCOPE_BOOT_CPU);
 }
 
 void __init setup_cpu_features(void)
