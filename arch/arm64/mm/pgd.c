@@ -44,8 +44,8 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
 	if (PGD_SIZE == PAGE_SIZE)
-		rkp_releasePageTable(virt_to_phys(pgd));
-		//free_page((unsigned long)pgd);
+		// rkp_releasePageTable(virt_to_phys(pgd));
+		free_page((unsigned long)pgd);
 	else
 		kmem_cache_free(pgd_cache, pgd);
 }

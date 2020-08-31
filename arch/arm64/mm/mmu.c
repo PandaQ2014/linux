@@ -274,7 +274,7 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 	do {
 		pte_t old_pte = READ_ONCE(*ptep);
 		if(rkp_paIsManaged(phys)){
-			// pr_err("init_pte | rkp_paIsManaged 0x%016llx",phys); 
+			pr_err("init_pte | rkp_paIsManaged 0x%016llx",phys); 
 			// pr_err("init_pte | ptep_pa: 0x%016llx, ptep: 0x%016llx, phys: 0x%016llx, addr: 0x%016llx, end: 0x%016llx, prot: 0x%016llx", ptep_pa,  ptep, phys, addr, end, pgprot_val(prot));
 			// unsigned long rkp_prot = (pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO);
 			// pr_info("init_pte | prot: 0x%016llx, rkp_prot: 0x%016llx, rkp_pte: 0x%016llx", pgprot_val(prot), rkp_prot, *(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
@@ -315,7 +315,7 @@ static void alloc_init_cont_pte(pmd_t *pmdp, unsigned long addr,
 		phys_addr_t pte_phys;
 		BUG_ON(!pgtable_alloc);
 		pte_phys = pgtable_alloc();
-		// pr_info("__pmd_populate | pmdp: 0x%016lx, pte_phys: 0x%016lx", (unsigned long)pmdp, (unsigned long)pte_phys);
+		pr_info("__pmd_populate | pmdp: 0x%016lx, pte_phys: 0x%016lx", (unsigned long)pmdp, (unsigned long)pte_phys);
 		__pmd_populate(pmdp, pte_phys, PMD_TYPE_TABLE);
 		pmd = READ_ONCE(*pmdp);
 	}
@@ -394,7 +394,7 @@ static void init_pmd(pud_t *pudp, unsigned long addr, unsigned long end,
 		/* try section mapping first */
 		if (((addr | next | phys) & ~SECTION_MASK) == 0 &&
 		    (flags & NO_BLOCK_MAPPINGS) == 0) {
-			// pr_info("init_pmd | block mapping addr: 0x%016lx", addr);
+			pr_info("init_pmd | pmd_set_huge addr: 0x%016lx, phys: 0x%016lx", addr, phys);
 			pmd_set_huge(pmdp, phys, prot);
 
 			/*
@@ -405,13 +405,14 @@ static void init_pmd(pud_t *pudp, unsigned long addr, unsigned long end,
 						      READ_ONCE(pmd_val(*pmdp))));
 		} else {
 			// pr_info("init_pmd | addr: 0x%016lx, end: 0x%016lx", addr, end);
+			// 两个都设置为rkp_early_pgtable_alloc，则将所有pte页表放入安全内存
 			if (rkp_segment(addr, end, _text, _etext)) {
 				alloc_init_cont_pte(pmdp, addr, next, phys, prot,
 					    rkp_early_pgtable_alloc, flags);
 			}
 			else
 				alloc_init_cont_pte(pmdp, addr, next, phys, prot,
-					    early_pgtable_alloc, flags);
+					    rkp_early_pgtable_alloc, flags);
 
 			BUG_ON(pmd_val(old_pmd) != 0 &&
 			       pmd_val(old_pmd) != READ_ONCE(pmd_val(*pmdp)));
@@ -585,6 +586,7 @@ static void alloc_init_pud(pgd_t *pgdp, unsigned long addr, unsigned long end,
 		 */
 		if (use_1G_block(addr, next, phys) &&
 		    (flags & NO_BLOCK_MAPPINGS) == 0) {
+			pr_info("alloc_init_pud | pud_set_huge addr: 0x%016lx, phys: 0x%016lx", addr, phys);
 			pud_set_huge(pudp, phys, prot);
 
 			/*
@@ -940,7 +942,7 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * all other segments are allowed to use contiguous mappings.
 	 */
 	pr_info("map _text | _text: 0x%016lx, _etext: 0x%016lx", _text, _etext);
-	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, NO_BLOCK_MAPPINGS,
+	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
 	pr_info("map __start_rodata | __start_rodata: 0x%016lx, __inittext_begin: 0x%016lx", __start_rodata, __inittext_begin);
 	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,

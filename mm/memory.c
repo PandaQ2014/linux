@@ -4017,12 +4017,10 @@ int __p4d_alloc(struct mm_struct *mm, pgd_t *pgd, unsigned long address)
 int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 {
 	pud_t *new = pud_alloc_one(mm, address);
-	pr_info("__pud_alloc | 1");
 	if (!new)
 		return -ENOMEM;
 
 	smp_wmb(); /* See comment in __pte_alloc */
-	pr_info("__pud_alloc | 2");
 
 	spin_lock(&mm->page_table_lock);
 #ifndef __ARCH_HAS_5LEVEL_HACK
@@ -4033,18 +4031,12 @@ int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 		pud_free(mm, new);
 #else
 	if (!pgd_present(*p4d)) {
-		pr_info("__pud_alloc | 3");
 		mm_inc_nr_puds(mm);
-		pr_info("__pud_alloc | 4");
 		pgd_populate(mm, p4d, new);
-		pr_info("__pud_alloc | 5");
 	} else	/* Another has populated it */
 		pud_free(mm, new);
-		pr_info("__pud_alloc | 6, mm->page_table_lock: 0x%016lx, val: %d", &mm->page_table_lock, mm->page_table_lock);
-		dump_stack();
 #endif /* __ARCH_HAS_5LEVEL_HACK */
 	spin_unlock(&mm->page_table_lock);
-	pr_info("__pud_alloc | 7");
 	return 0;
 }
 #endif /* __PAGETABLE_PUD_FOLDED */

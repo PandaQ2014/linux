@@ -220,7 +220,9 @@ static inline pmd_t pmd_mkcont(pmd_t pmd)
 
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
-	//WRITE_ONCE(*ptep, pte);
+	// dump_stack();
+	// pr_info("set_pte | ptep: 0x%016lx, pte: 0x%016lx", ptep, pte_val(pte));
+	// WRITE_ONCE(*ptep, pte);
 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(pte));
 	/*
 	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
