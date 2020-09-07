@@ -198,6 +198,7 @@ static int vmap_p4d_range(pgd_t *pgd, unsigned long addr,
 	unsigned long next;
 
 	p4d = p4d_alloc(&init_mm, pgd, addr);
+	// pr_info("vmap_p4d_range | p4d: 0x%016lx", (unsigned long)p4d);
 	if (!p4d)
 		return -ENOMEM;
 	do {
@@ -225,9 +226,12 @@ static int vmap_page_range_noflush(unsigned long start, unsigned long end,
 
 	BUG_ON(addr >= end);
 	pgd = pgd_offset_k(addr);
+	// pr_info("vmap_page_range_noflush | pgd: 0x%016lx, start: 0x%016lx, end: 0x%016lx", pgd, start, end);
 	do {
 		next = pgd_addr_end(addr, end);
+		// pr_info("vmap_page_range_noflush | next: 0x%016lx", next);
 		err = vmap_p4d_range(pgd, addr, next, prot, pages, &nr);
+		// pr_info("vmap_page_range_noflush | err: %d, nr: %d", err, nr);
 		if (err)
 			return err;
 	} while (pgd++, addr = next, addr != end);

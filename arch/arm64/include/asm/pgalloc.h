@@ -97,8 +97,8 @@ extern void pgd_free(struct mm_struct *mm, pgd_t *pgdp);
 static inline pte_t *
 pte_alloc_one_kernel(struct mm_struct *mm)
 {
-	// return (pte_t*)phys_to_virt(rkp_allocPageTable());
-	return (pte_t *)__get_free_page(PGALLOC_GFP);
+	return (pte_t*)phys_to_virt(rkp_allocPageTable());
+	// return (pte_t *)__get_free_page(PGALLOC_GFP);
 }
 
 static inline pgtable_t
@@ -125,8 +125,8 @@ pte_alloc_one(struct mm_struct *mm)
 static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 {
 	if (ptep)
-		// rkp_releasePageTable(virt_to_phys(ptep));
-		free_page((unsigned long)ptep);
+		rkp_releasePageTable(virt_to_phys(ptep));
+		// free_page((unsigned long)ptep);
 }
 
 static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
