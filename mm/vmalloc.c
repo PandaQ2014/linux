@@ -131,6 +131,70 @@ static void vunmap_page_range(unsigned long addr, unsigned long end)
 	} while (pgd++, addr = next, addr != end);
 }
 
+static int virt_dll_to_phys(void *p, unsigned long *pa, pte_t **pte_in)
+{
+	unsigned long va = (unsigned long)p;
+	struct mm_struct *mm;
+	pgd_t *pgd;
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+
+	//   user va: 0x0000 ~~~
+	// kernel va: 0xffff ~~~
+	if (va >> 48) {
+		mm = &init_mm;
+	} else {
+		mm = current->mm;
+	}
+
+	pgd = pgd_offset(mm, va);
+	if (pgd_none(*pgd)) {
+		pr_info("virt_dll_to_phys | pgd not found!");
+		goto error;
+	}
+
+	p4d = p4d_offset(pgd, va);
+	if (p4d_none(*p4d)) {
+		pr_info("virt_dll_to_phys | p4d not found!");
+		goto error;
+	}
+
+	pud = pud_offset(p4d, va);
+	if (pud_none(*pud)) {
+		pr_info("virt_dll_to_phys | pud not found!");
+		goto error;
+	}
+
+	pmd = pmd_offset(pud, va);
+	if (pmd_none(*pmd)) {
+		goto error;
+	}
+
+	pte = pte_offset_kernel(pmd, va);
+	if (pte_none(*pte)) {
+		pr_info("virt_dll_to_phys | pte not found!");
+		goto error;
+	}
+    // pr_info("virt_dll_to_phys | pte: 0x%016llx", pte);
+
+	if (!pte_present(*pte)) {
+		pr_err("pte is not in RAM.\n");
+		goto error;
+	}
+
+	*pa = (unsigned long)(((pte_val(*pte) & PAGE_MASK) | (va & ~PAGE_MASK)) &
+			    0x0000ffffffffffff); // 0x0000ffff ffffffff
+    *pte_in = pte;
+    // pr_info("virt_dll_to_phys | pte_in: 0x%016llx", pte_in);
+	return 0;
+
+error:
+	pr_err("error va: 0x%016lx\n", va);
+	return -1;
+}
+
 static int vmap_pte_range(pmd_t *pmd, unsigned long addr,
 		unsigned long end, pgprot_t prot, struct page **pages, int *nr)
 {
@@ -141,9 +205,22 @@ static int vmap_pte_range(pmd_t *pmd, unsigned long addr,
 	 * callers keep track of where we're up to.
 	 */
 
+	// unsigned long phys;
+	// pte_t *pte_entry;
+	// virt_dll_to_phys((void *)0xffffffff80000000, &phys, &pte_entry);
+	// pr_info("vmap_pte_range | virt_dll_to_phys phys: 0x%016lx, pte_entry: 0x%016lx", phys, pte_entry);
+
+	unsigned long test1 = (unsigned long) pmd_page_paddr(READ_ONCE(*pmd));
+	unsigned long test2 = pte_index(addr) * sizeof(pte_t);
+	unsigned long test3 = __va(test1 + test2);
+	pr_info("test1: 0x%016lx, test2: 0x%016lx, test3: 0x%016lx", test1, test2, test3);
+
+	pr_info("vmap_pte_range | addr: 0x%016lx", addr);
 	pte = pte_alloc_kernel(pmd, addr);
+	pr_info("vmap_pte_range | pte_p: 0x%016lx pte: 0x%016lx", (unsigned long)pte, pte_val(*pte));
 	if (!pte)
 		return -ENOMEM;
+	pr_info("vmap_pte_range | 2");
 	do {
 		struct page *page = pages[*nr];
 
@@ -164,6 +241,7 @@ static int vmap_pmd_range(pud_t *pud, unsigned long addr,
 	unsigned long next;
 
 	pmd = pmd_alloc(&init_mm, pud, addr);
+	pr_info("vmap_pmd_range | pmdp: 0x%016lx, pmd: 0x%016lx", (unsigned long)pmd, pmd_val(*pmd));
 	if (!pmd)
 		return -ENOMEM;
 	do {
@@ -181,6 +259,7 @@ static int vmap_pud_range(p4d_t *p4d, unsigned long addr,
 	unsigned long next;
 
 	pud = pud_alloc(&init_mm, p4d, addr);
+	pr_info("vmap_pud_range | pud: 0x%016lx", pud_val(*pud));
 	if (!pud)
 		return -ENOMEM;
 	do {
@@ -198,7 +277,7 @@ static int vmap_p4d_range(pgd_t *pgd, unsigned long addr,
 	unsigned long next;
 
 	p4d = p4d_alloc(&init_mm, pgd, addr);
-	// pr_info("vmap_p4d_range | p4d: 0x%016lx", (unsigned long)p4d);
+	pr_info("vmap_p4d_range | p4d: 0x%016lx", (unsigned long)p4d);
 	if (!p4d)
 		return -ENOMEM;
 	do {
@@ -226,12 +305,12 @@ static int vmap_page_range_noflush(unsigned long start, unsigned long end,
 
 	BUG_ON(addr >= end);
 	pgd = pgd_offset_k(addr);
-	// pr_info("vmap_page_range_noflush | pgd: 0x%016lx, start: 0x%016lx, end: 0x%016lx", pgd, start, end);
+	pr_info("vmap_page_range_noflush | pgd: 0x%016lx, start: 0x%016lx, end: 0x%016lx", pgd, start, end);
 	do {
 		next = pgd_addr_end(addr, end);
-		// pr_info("vmap_page_range_noflush | next: 0x%016lx", next);
+		pr_info("vmap_page_range_noflush | next: 0x%016lx", next);
 		err = vmap_p4d_range(pgd, addr, next, prot, pages, &nr);
-		// pr_info("vmap_page_range_noflush | err: %d, nr: %d", err, nr);
+		pr_info("vmap_page_range_noflush | err: %d, nr: %d", err, nr);
 		if (err)
 			return err;
 	} while (pgd++, addr = next, addr != end);
@@ -239,12 +318,16 @@ static int vmap_page_range_noflush(unsigned long start, unsigned long end,
 	return nr;
 }
 
+static DEFINE_SPINLOCK(vmap_page_debug);
+
 static int vmap_page_range(unsigned long start, unsigned long end,
 			   pgprot_t prot, struct page **pages)
 {
 	int ret;
 
+	spin_lock(&vmap_page_debug);
 	ret = vmap_page_range_noflush(start, end, prot, pages);
+	spin_unlock(&vmap_page_debug);
 	flush_cache_vmap(start, end);
 	return ret;
 }

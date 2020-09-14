@@ -106,14 +106,14 @@ pte_alloc_one(struct mm_struct *mm)
 {
 	struct page *pte;
 
-	pte = alloc_pages(PGALLOC_GFP, 0);
-	// pte = phys_to_page(rkp_allocPageTable());
+	// pte = alloc_pages(PGALLOC_GFP, 0);
+	pte = phys_to_page(rkp_allocPageTable());
 	if (!pte)
 		return NULL;
 	if (!pgtable_page_ctor(pte)) {
-		// pr_err("!pgtable_page_ctor");
-		// rkp_releasePageTable(page_to_phys(pte));
-		__free_page(pte);
+		pr_err("!pgtable_page_ctor");
+		rkp_releasePageTable(page_to_phys(pte));
+		// __free_page(pte);
 		return NULL;
 	}
 	return pte;
@@ -132,8 +132,8 @@ static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
 {
 	pgtable_page_dtor(pte);
-	// rkp_releasePageTable(page_to_phys(pte));
-	__free_page(pte);
+	rkp_releasePageTable(page_to_phys(pte));
+	// __free_page(pte);
 }
 
 static inline void __pmd_populate(pmd_t *pmdp, phys_addr_t ptep,
@@ -152,7 +152,9 @@ pmd_populate_kernel(struct mm_struct *mm, pmd_t *pmdp, pte_t *ptep)
 	/*
 	 * The pmd must be loaded with the physical address of the PTE table
 	 */
+	pr_info("pmd_populate_kernel | before pmdp: 0x%016lx, pmdp_pa: 0x%016lx, pmd: 0x%016lx, ptep: 0x%016lx, ptep_pa: 0x%016lx", (unsigned long)pmdp, __pa(pmdp), pmd_val(*pmdp), (unsigned long)ptep, __pa(ptep));
 	__pmd_populate(pmdp, __pa(ptep), PMD_TYPE_TABLE);
+	pr_info("pmd_populate_kernel | after pmd: 0x%016lx", pmd_val(*pmdp));
 }
 
 static inline void

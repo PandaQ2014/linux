@@ -34,7 +34,7 @@ phys_addr_t rkp_allocPageTable(void){
             return 0;
         }
         POOLEND = POOLSTART + POOLSIZE*PAGE_SIZE;
-        pr_err("PTM start 0x%016llx end 0x%016llx",POOLSTART,POOLEND);
+        pr_err("PTM start: 0x%016llx end: 0x%016llx, tzc end: 0x%016lx",POOLSTART,POOLEND, POOLEND+POOLSIZE*sizeof(unsigned int)-1);
         INITED = 1;
     }
 

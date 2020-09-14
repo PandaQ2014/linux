@@ -437,20 +437,28 @@ int __pte_alloc(struct mm_struct *mm, pmd_t *pmd)
 
 int __pte_alloc_kernel(pmd_t *pmd)
 {
+	pr_info("__pte_alloc_kernel |");
 	pte_t *new = pte_alloc_one_kernel(&init_mm);
+	pr_info("__pte_alloc_kernel | newp: 0x%016lx, new: 0x%016lx", (unsigned long)new, pte_val(*new));
 	if (!new)
 		return -ENOMEM;
 
 	smp_wmb(); /* See comment in __pte_alloc */
+	pr_info("__pte_alloc_kernel | 2");
 
 	spin_lock(&init_mm.page_table_lock);
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
 		pmd_populate_kernel(&init_mm, pmd, new);
 		new = NULL;
+		pr_info("__pte_alloc_kernel | 3, pmd: 0x%016lx", pmd_val(*pmd));
 	}
 	spin_unlock(&init_mm.page_table_lock);
-	if (new)
+	pr_info("__pte_alloc_kernel | as");
+	if (new) {
+		pr_info("__pte_alloc_kernel | 4");
 		pte_free_kernel(&init_mm, new);
+		pr_info("__pte_alloc_kernel | 5");
+	}
 	return 0;
 }
 

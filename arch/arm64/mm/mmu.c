@@ -274,7 +274,7 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 	do {
 		pte_t old_pte = READ_ONCE(*ptep);
 		if(rkp_paIsManaged(phys)){
-			pr_err("init_pte | rkp_paIsManaged 0x%016llx",phys); 
+			// pr_err("init_pte | rkp_paIsManaged phys: 0x%016llx, addr: 0x%016lx",phys, addr); 
 			// pr_err("init_pte | ptep_pa: 0x%016llx, ptep: 0x%016llx, phys: 0x%016llx, addr: 0x%016llx, end: 0x%016llx, prot: 0x%016llx", ptep_pa,  ptep, phys, addr, end, pgprot_val(prot));
 			// unsigned long rkp_prot = (pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO);
 			// pr_info("init_pte | prot: 0x%016llx, rkp_prot: 0x%016llx, rkp_pte: 0x%016llx", pgprot_val(prot), rkp_prot, *(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
@@ -282,7 +282,7 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 			//PAGE_KERNEL_RO PAGE_HYP_RO
 		}else{
 			// set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
-			// pr_info("init_pte | rkp_paNotManaged 0x%016llx", phys);
+			// pr_info("init_pte | rkp_paNotManaged phys: 0x%016llx, addr: 0x%016lx", phys, addr);
 			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		}
 		// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
@@ -315,7 +315,7 @@ static void alloc_init_cont_pte(pmd_t *pmdp, unsigned long addr,
 		phys_addr_t pte_phys;
 		BUG_ON(!pgtable_alloc);
 		pte_phys = pgtable_alloc();
-		pr_info("__pmd_populate | pmdp: 0x%016lx, pte_phys: 0x%016lx", (unsigned long)pmdp, (unsigned long)pte_phys);
+		// pr_info("__pmd_populate | pmdp: 0x%016lx, pte_phys: 0x%016lx", (unsigned long)pmdp, (unsigned long)pte_phys);
 		__pmd_populate(pmdp, pte_phys, PMD_TYPE_TABLE);
 		pmd = READ_ONCE(*pmdp);
 	}
@@ -385,7 +385,7 @@ static void init_pmd(pud_t *pudp, unsigned long addr, unsigned long end,
 	pmd_t *pmdp;
 
 	pmdp = pmd_set_fixmap_offset(pudp, addr);
-	// pr_info("init_pmd | pmdp_pa: 0x%016lx", (unsigned long)pmd_offset_phys(pudp, addr));
+	// pr_info("init_pmd | pmdp_pa: 0x%016lx, pmdp: 0x%016lx", (unsigned long)pmd_offset_phys(pudp, addr), pmdp);
 	do {
 		pmd_t old_pmd = READ_ONCE(*pmdp);
 

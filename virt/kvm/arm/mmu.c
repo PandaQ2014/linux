@@ -204,9 +204,9 @@ static inline void kvm_set_pte(pte_t *ptep, pte_t new_pte)
 
 static inline void kvm_set_pmd(pmd_t *pmdp, pmd_t new_pmd)
 {
-	rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(new_pmd));
-	// WRITE_ONCE(*pmdp, new_pmd);
-	// dsb(ishst);
+	// rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(new_pmd));
+	WRITE_ONCE(*pmdp, new_pmd);
+	dsb(ishst);
 }
 
 static inline void kvm_pmd_populate(pmd_t *pmdp, pte_t *ptep)
@@ -217,17 +217,17 @@ static inline void kvm_pmd_populate(pmd_t *pmdp, pte_t *ptep)
 static inline void kvm_pud_populate(pud_t *pudp, pmd_t *pmdp)
 {
 	pud_t value =  kvm_mk_pud(pmdp);
-	rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(value));
-	// WRITE_ONCE(*pudp, kvm_mk_pud(pmdp));
-	// dsb(ishst);
+	// rkp_setPageTableElement(RKP_PUD,PTPTR2ULPTR(pudp),PTVALUE2UL(value));
+	WRITE_ONCE(*pudp, kvm_mk_pud(pmdp));
+	dsb(ishst);
 }
 
 static inline void kvm_pgd_populate(pgd_t *pgdp, pud_t *pudp)
 {
 	pgd_t value =  kvm_mk_pgd(pudp);
-	rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(value));
-	// WRITE_ONCE(*pgdp, kvm_mk_pgd(pudp));
-	// dsb(ishst);
+	// rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(pgdp),PTVALUE2UL(value));
+	WRITE_ONCE(*pgdp, kvm_mk_pgd(pudp));
+	dsb(ishst);
 }
 
 /*
