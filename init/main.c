@@ -107,6 +107,7 @@ static int kernel_init(void *);
 extern void init_IRQ(void);
 extern void radix_tree_init(void);
 
+void pkm_kernel_thread(void);
 /*
  * Debug helper: via this flag we know that we are in 'early bootup code'
  * where only the boot processor is running with IRQ disabled.  This means
@@ -927,6 +928,7 @@ extern initcall_entry_t __initcall4_start[];
 extern initcall_entry_t __initcall5_start[];
 extern initcall_entry_t __initcall6_start[];
 extern initcall_entry_t __initcall7_start[];
+extern initcall_entry_t __initcall8_start[];
 extern initcall_entry_t __initcall_end[];
 
 static initcall_entry_t *initcall_levels[] __initdata = {
@@ -938,6 +940,7 @@ static initcall_entry_t *initcall_levels[] __initdata = {
 	__initcall5_start,
 	__initcall6_start,
 	__initcall7_start,
+    __initcall8_start,
 	__initcall_end,
 };
 
@@ -951,6 +954,7 @@ static const char *initcall_level_names[] __initdata = {
 	"fs",
 	"device",
 	"late",
+    "pkm",
 };
 
 static void __init do_initcall_level(int level)
@@ -1180,3 +1184,166 @@ static noinline void __init kernel_init_freeable(void)
 
 	integrity_load_keys();
 }
+
+#include <linux/arm-smccc.h>
+#define SMC_TYPE_FAST           1ULL
+#define FUNCID_TYPE_SHIFT       31U
+#define FUNCID_CC_SHIFT         30U
+#define SMC_32              0U
+#define FUNCID_OEN_SHIFT        24U
+#define FUNCID_NUM_MASK         0xffffU
+#define TEESMC_OPTEED_RV(func_num) \
+        ((SMC_TYPE_FAST << FUNCID_TYPE_SHIFT) | \ 
+         ((SMC_32) << FUNCID_CC_SHIFT) | \
+         (62 << FUNCID_OEN_SHIFT) | \
+         ((func_num) & FUNCID_NUM_MASK))
+#include<linux/init.h> 
+#include <linux/printk.h>
+#include <linux/delay.h>
+#include <linux/kthread.h>
+
+int pkm_kernel_thread_func(void *data){
+    ssleep(2);
+    struct arm_smccc_res res,res_stop;
+    uint32_t smcid=TEESMC_OPTEED_RV(50);    
+    uint32_t smcid_stop=TEESMC_OPTEED_RV(49);
+    memset(&res, 0, sizeof(res));
+    memset(&res_stop, 0, sizeof(res_stop));
+
+    unsigned long monitor_B_time,monitor_B_time_now;
+    
+    struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
+    //unsigned long master_time=get_seconds();
+    while(1){
+        pr_emerg("主线程000000000000000000000000000.。。。。。。。。。。。。。。。%d,%d",monitor_B->pid,monitor_B->pid); 
+        arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res);
+        mdelay(2000);
+        ssleep(2);
+        if (IS_ERR(monitor_B))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+        {
+            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+            arm_smccc_smc(smcid_stop,0,0,0,0,0,0,0,&res_stop);
+        }
+        else{
+            if(monitor_B->state==2)
+                monitor_B_time=get_seconds();
+            else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32)
+                arm_smccc_smc(smcid_stop,0,0,0,0,0,0,0,&res_stop);
+            else
+                ;
+            while(monitor_B->state==2){
+                monitor_B_time_now=get_seconds();
+                pr_emerg("A时间1：%u，时间2：%u，时间差：%u",monitor_B_time_now,monitor_B_time,monitor_B_time_now-monitor_B_time); 
+                if (monitor_B_time_now-monitor_B_time>5){
+                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                    arm_smccc_smc(smcid_stop,0,0,0,0,0,0,0,&res_stop);
+                    break; 
+                }
+                else
+                    mdelay(100);
+            }
+        }
+                      
+    }
+    return 0;
+}
+
+
+int pkm_kernel_thread_monitor1(void *data){
+    ssleep(2);
+    struct arm_smccc_res res_monitor1;
+    uint32_t smcid=TEESMC_OPTEED_RV(49);
+    memset(&res_monitor1, 0, sizeof(res_monitor1));
+
+    unsigned long monitor_C_time,monitor_C_time_now;
+    
+    struct task_struct *monitor_C=list_entry(current->sibling.next,struct task_struct,sibling);
+    while(1){
+        pr_emerg("监控线程111111111111111.。。。。。。。。。。。。。。。%d,%d",monitor_C->pid,monitor_C->pid); 
+        mdelay(2000);
+        ssleep(2);
+        if (IS_ERR(monitor_C))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+            {
+            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+            arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor1);
+            }
+        else{
+            if(monitor_C->state==2)
+                monitor_C_time=get_seconds();
+            else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32)
+                arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor1);
+            else
+                ;
+            while(monitor_C->state==2){
+                monitor_C_time_now=get_seconds();
+                pr_emerg("B时间1：%u，时间2：%u，时间差：%u",monitor_C_time_now,monitor_C_time,monitor_C_time_now-monitor_C_time); 
+                if (monitor_C_time_now-monitor_C_time>5){
+                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                    arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor1);
+                    break; 
+                }
+                else
+                    mdelay(100);
+            }
+        }
+    }
+    return 0;
+}
+
+
+int pkm_kernel_thread_monitor2(void *data){
+    ssleep(2);
+    struct arm_smccc_res res_monitor2;
+    uint32_t smcid=TEESMC_OPTEED_RV(49);
+    memset(&res_monitor2, 0, sizeof(res_monitor2));
+
+    unsigned long monitor_A_time,monitor_A_time_now;
+
+    struct task_struct *master_A=list_entry(current->sibling.prev->prev,struct task_struct,sibling);
+    while(1){
+        pr_emerg("监控线程222222222222222.。。。。。。。。。。。。。。。%d,%d",master_A->pid,master_A->pid); 
+        mdelay(2000);
+        ssleep(2);
+        /*
+            下面这段代码是检测线程是否一直活着或者被挂起时间太长的
+        */
+        if (IS_ERR(master_A))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+        {
+            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+            arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor2);
+        }
+        else{
+            if(master_A->state==2)
+                monitor_A_time=get_seconds();
+            else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32)
+                arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor2);
+            else
+                ;
+            while(master_A->state==2){
+                monitor_A_time_now=get_seconds();
+                pr_emerg("C时间1：%u，时间2：%u，时间差：%u",monitor_A_time_now,monitor_A_time,monitor_A_time_now-monitor_A_time); 
+                if (monitor_A_time_now-monitor_A_time>5){
+                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                    arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_monitor2);
+                    break;
+                } 
+                else
+                    mdelay(100);
+            }
+        }
+        
+
+        
+    }
+
+    return 0;
+}
+
+
+void pkm_kernel_thread(){
+    struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");
+    struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
+    struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
+    pr_emerg("%d,%d,%d",A->pid,B->pid,C->pid);
+}
+pkm_initcall(pkm_kernel_thread);
