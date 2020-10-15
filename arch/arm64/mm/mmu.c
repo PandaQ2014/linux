@@ -32,7 +32,7 @@
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
-
+#include <linux/arm-smccc.h>
 #include <asm/barrier.h>
 #include <asm/cputype.h>
 #include <asm/fixmap.h>
@@ -775,6 +775,13 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * Only rodata will be remapped with different permissions later on,
 	 * all other segments are allowed to use contiguous mappings.
 	 */
+    phys_addr_t ro_start = __pa_symbol(_text);
+	phys_addr_t ro_end = __pa_symbol(__inittext_begin);
+	struct arm_smccc_res res;
+	uint32_t smcid = TEESMC_OPTEED_RV(40); 
+	pr_info("text_start£º%016llx, end:%016llx\n",ro_start,ro_end);
+	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);
+
 	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
 	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,

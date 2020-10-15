@@ -101,7 +101,43 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
+#include <linux/init.h> 
+#include <linux/printk.h>
+#include <linux/delay.h>
+#include <linux/kthread.h>
+#include <linux/export.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/kexec.h>
+#include <linux/libfdt.h>
+#include <linux/mman.h>
+#include <linux/nodemask.h>
+#include <linux/memblock.h>
+#include <linux/fs.h>
+#include <linux/mm.h>
 
+#include <asm/barrier.h>
+#include <asm/cputype.h>
+#include <asm/fixmap.h>
+#include <asm/kasan.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/sections.h>
+#include <asm/setup.h>
+#include <asm/sizes.h>
+#include <asm/tlb.h>
+#include <asm/mmu_context.h>
+#include <asm/ptdump.h>
+#include <asm/tlbflush.h>
+#include <asm/rkp.h>
+
+#include <asm/page.h>
+#include <linux/fcntl.h>
+#include <linux/unistd.h>
+#include <linux/uaccess.h>
+#include <linux/module.h>
+#include <linux/arm-smccc.h>
+#include "../security/selinux/include/security.h"
+ 
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -738,6 +774,17 @@ asmlinkage __visible void __init start_kernel(void)
 	taskstats_init_early();
 	delayacct_init();
 
+    struct arm_smccc_res res;
+	uint32_t smcid = TEESMC_OPTEED_RV(52);
+	selinux_state.enforcing = 1;
+	pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
+	pr_info("selinux_state.enforcing:%d,addr:%016llx\n",selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
+	phys_addr_t pa_enabled = __pa_symbol(&selinux_enabled);
+	phys_addr_t pa_enforcing = __pa_symbol(&selinux_state.enforcing);
+	pr_info("pa_enabled:%016llx",pa_enabled);
+	pr_info("pa_enforcing:%016llx",pa_enforcing);
+	arm_smccc_smc(smcid, pa_enabled, pa_enforcing, 0, 0, 0, 0, 0, &res);
+
 	check_bugs();
 
 	acpi_subsystem_init();
@@ -1185,6 +1232,8 @@ static noinline void __init kernel_init_freeable(void)
 	integrity_load_keys();
 }
 
+
+
 #include <linux/arm-smccc.h>
 #define SMC_TYPE_FAST           1ULL
 #define FUNCID_TYPE_SHIFT       31U
@@ -1207,6 +1256,8 @@ int pkm_kernel_thread_func(void *data){
     struct arm_smccc_res res,res_stop;
     uint32_t smcid=TEESMC_OPTEED_RV(50);    
     uint32_t smcid_stop=TEESMC_OPTEED_RV(49);
+    uint32_t smcid_51 = TEESMC_OPTEED_RV(51); 
+    uint32_t smcid_52 = TEESMC_OPTEED_RV(52); 
     memset(&res, 0, sizeof(res));
     memset(&res_stop, 0, sizeof(res_stop));
 
@@ -1215,6 +1266,12 @@ int pkm_kernel_thread_func(void *data){
     struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
     //unsigned long master_time=get_seconds();
     while(1){
+        arm_smccc_smc(smcid_51, 0, 0, 0, 0, 0, 0, 0, &res);
+		// pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
+		// pr_info("selinux_state.disabled:%d,addr:%016llx\nselinux_state.enforcing:%d,addr:%016llx\n",selinux_state.disabled,(unsigned long long)&selinux_state.disabled,selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
+		arm_smccc_smc(smcid_52, 0, 0, 0, 0, 0, 0, 0, &res);
+
+
         pr_emerg("主线程000000000000000000000000000.。。。。。。。。。。。。。。。%d,%d",monitor_B->pid,monitor_B->pid); 
         arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res);
         mdelay(2000);
@@ -1344,6 +1401,5 @@ void pkm_kernel_thread(){
     struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");
     struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
     struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
-    pr_emerg("%d,%d,%d",A->pid,B->pid,C->pid);
 }
 pkm_initcall(pkm_kernel_thread);
