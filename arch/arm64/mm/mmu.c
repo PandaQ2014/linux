@@ -779,10 +779,9 @@ static void __init map_kernel(pgd_t *pgdp)
 	phys_addr_t ro_end = __pa_symbol(__inittext_begin);
 	struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(40); 
-	pr_info("text_start£º%016llx, end:%016llx\n",ro_start,ro_end);
 	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);
 
-	map_kernel_segment(pgdp, _text, _etext, PAGE_KERNEL_EXEC, &vmlinux_text, 0,
+	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
 	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
 			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
