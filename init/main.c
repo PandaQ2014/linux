@@ -1265,7 +1265,7 @@ int pkm_kernel_thread_func(void *data){
     
     struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
     //unsigned long master_time=get_seconds();
-    while(1){
+    while(!kthread_should_stop()){
         //pr_emerg("%016llx",(unsigned long long int)__pa_symbol(_text));
 
         arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);
@@ -1310,9 +1310,7 @@ int pkm_kernel_thread_func(void *data){
                 else
                     mdelay(100);
             }
-        } 
-        mdelay(5000);
-        do_exit(1);             
+        }            
     }
     return 0;
 }
@@ -1409,5 +1407,7 @@ void pkm_kernel_thread(){
     struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");
     struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
     struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
+    ssleep(20);
+    kthread_stop(A);
 }
 pkm_initcall(pkm_kernel_thread);
