@@ -14,7 +14,7 @@
 #include <linux/net.h>
 #include <linux/siphash.h>
 #include <net/secure_seq.h>
-
+#include <linux/printk.h>
 #if IS_ENABLED(CONFIG_IPV6) || IS_ENABLED(CONFIG_INET)
 #include <linux/in6.h>
 #include <net/tcp.h>
@@ -61,7 +61,6 @@ u32 secure_tcpv6_ts_off(const struct net *net,
 		.saddr = *(struct in6_addr *)saddr,
 		.daddr = *(struct in6_addr *)daddr,
 	};
-
 	if (net->ipv4.sysctl_tcp_timestamps != 1)
 		return 0;
 

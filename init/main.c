@@ -1265,22 +1265,24 @@ int pkm_kernel_thread_func(void *data){
     
     struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
     //unsigned long master_time=get_seconds();
-    while(1){   
+    while(1){
+        //pr_emerg("%016llx",(unsigned long long int)__pa_symbol(_text));
+
         arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);
         //pr_emerg("aaaaaaaaaaaaaaaaaaaaaaaaa........%d,%d,%d,%d.......!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",res_51.a0,res_51.a1,res_51.a2,res_51.a3); 
         if(res_51.a0==0)
-            panic("error");
+            panic("there is an error...................");
 		// pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
 		// pr_info("selinux_state.disabled:%d,addr:%016llx\nselinux_state.enforcing:%d,addr:%016llx\n",selinux_state.disabled,(unsigned long long)&selinux_state.disabled,selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
         arm_smccc_smc(smcid_52,0,0,0,0,0,0,0,&res_52);		
         if(res_52.a0==0)
-            panic("error");
+            panic("there is an error...................");
 
 
         //pr_emerg("主线程000000000000000000000000000.。。。。。。。。。。。。。。。%d,%d",monitor_B->pid,monitor_B->pid); 
         arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_50);        
         if(res_50.a0==0)
-            panic("error");
+            panic("there is an error...................");
         mdelay(2000);
         ssleep(2);
         if (IS_ERR(monitor_B))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
@@ -1291,8 +1293,10 @@ int pkm_kernel_thread_func(void *data){
         else{
             if(monitor_B->state==2)
                 monitor_B_time=get_seconds();
-            else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32||monitor_B->state==128)
+            else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32||monitor_B->state==128){
+                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
+            }
             else
                 ;
             while(monitor_B->state==2){
@@ -1306,7 +1310,9 @@ int pkm_kernel_thread_func(void *data){
                 else
                     mdelay(100);
             }
-        }              
+        } 
+        mdelay(5000);
+        do_exit(1);             
     }
     return 0;
 }
@@ -1330,8 +1336,10 @@ int pkm_kernel_thread_monitor1(void *data){
         else{
             if(monitor_C->state==2)
                 monitor_C_time=get_seconds();
-            else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32||monitor_C->state==128)
+            else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32||monitor_C->state==128){
+                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
+            }
             else
                 ;
             while(monitor_C->state==2){
@@ -1372,8 +1380,11 @@ int pkm_kernel_thread_monitor2(void *data){
         else{
             if(master_A->state==2)
                 monitor_A_time=get_seconds();
-            else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32 ||master_A->state==128)
+            else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32 ||master_A->state==128)                     
+            {
+                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
+            }
             else
                 ;
             while(master_A->state==2){
@@ -1387,8 +1398,7 @@ int pkm_kernel_thread_monitor2(void *data){
                 else
                     mdelay(100);
             }
-        }
-               
+        }   
     }
     return 0;
 }

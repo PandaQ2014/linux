@@ -3,7 +3,6 @@
 #include <linux/spinlock.h>
 #include <linux/once.h>
 #include <linux/random.h>
-
 struct once_work {
 	struct work_struct work;
 	struct static_key_true *key;

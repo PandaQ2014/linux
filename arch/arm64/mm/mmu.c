@@ -776,7 +776,7 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * all other segments are allowed to use contiguous mappings.
 	 */
     phys_addr_t ro_start = __pa_symbol(_text);
-	phys_addr_t ro_end = __pa_symbol(__inittext_begin);
+	phys_addr_t ro_end = __pa_symbol(_etext);
 	struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(40); 
 	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);
@@ -784,7 +784,7 @@ static void __init map_kernel(pgd_t *pgdp)
 	map_kernel_segment(pgdp, _text, _etext, text_prot, &vmlinux_text, 0,
 			   VM_NO_GUARD);
 	map_kernel_segment(pgdp, __start_rodata, __inittext_begin, PAGE_KERNEL,
-			   &vmlinux_rodata, NO_CONT_MAPPINGS, VM_NO_GUARD);
+			   &vmlinux_rodata, NO_CONT_MAPPINGS,VM_NO_GUARD);
 	map_kernel_segment(pgdp, __inittext_begin, __inittext_end, text_prot,
 			   &vmlinux_inittext, 0, VM_NO_GUARD);
 	map_kernel_segment(pgdp, __initdata_begin, __initdata_end, PAGE_KERNEL,
