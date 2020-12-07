@@ -1265,7 +1265,7 @@ int pkm_kernel_thread_func(void *data){
     
     struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
     //unsigned long master_time=get_seconds();
-    while(!kthread_should_stop()){
+    while(1){
         //pr_emerg("%016llx",(unsigned long long int)__pa_symbol(_text));
 
         arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);
@@ -1407,7 +1407,23 @@ void pkm_kernel_thread(){
     struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");
     struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
     struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
-    ssleep(20);
-    kthread_stop(A);
+    uint64_t dizhi=__pa_symbol(pkm_kernel_thread_func);  
+    pr_emerg("1111111111111111111111111111111111111111110x%016llx\n",dizhi);
+    char *start=(char *)pkm_kernel_thread_func;
+    int i=0;
+    for (i=0;i<=30;i++)
+    {
+        pr_emerg("start:0x%016llx    addr:0x%016llx\n",*start,start);
+        start++;
+    }
+    start-=30;
+    mdelay(20000);
+    for (i=0;i<=30;i++)
+    {
+        if (i==3)
+            *start=0x000000000000ffff;
+        pr_emerg("start:0x%016llx    addr:0x%016llx\n",*start,start);
+        start++;
+    }
 }
 pkm_initcall(pkm_kernel_thread);
