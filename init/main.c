@@ -98,6 +98,7 @@
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
+#include <asm/rkp.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
@@ -406,14 +407,17 @@ noinline void __ref rest_init(void)
 {
 	struct task_struct *tsk;
 	int pid;
-
+	pr_err("dll rest_init-2");
 	rcu_scheduler_starting();
 	/*
 	 * We need to spawn init first so that it obtains pid 1, however
 	 * the init task will end up wanting to create kthreads, which, if
 	 * we schedule it before we create kthreadd, will OOPS.
 	 */
+	pr_err("dll rest_init-1");
+
 	pid = kernel_thread(kernel_init, NULL, CLONE_FS);
+	pr_err("dll rest_init0");
 	/*
 	 * Pin init on the boot CPU. Task migration is not properly working
 	 * until sched_init_smp() has been run. It will set the allowed
@@ -421,14 +425,21 @@ noinline void __ref rest_init(void)
 	 */
 	rcu_read_lock();
 	tsk = find_task_by_pid_ns(pid, &init_pid_ns);
+	pr_err("dll rest_init1");
 	set_cpus_allowed_ptr(tsk, cpumask_of(smp_processor_id()));
+	pr_err("dll rest_init2");
 	rcu_read_unlock();
-
+	pr_err("dll rest_init3");
 	numa_default_policy();
+	pr_err("dll rest_init4");
 	pid = kernel_thread(kthreadd, NULL, CLONE_FS | CLONE_FILES);
+	pr_err("dll rest_init5");
 	rcu_read_lock();
+	pr_err("dll rest_init6");
 	kthreadd_task = find_task_by_pid_ns(pid, &init_pid_ns);
+	pr_err("dll rest_init7");
 	rcu_read_unlock();
+	pr_err("dll rest_init8");
 
 	/*
 	 * Enable might_sleep() and smp_processor_id() checks.
@@ -438,16 +449,21 @@ noinline void __ref rest_init(void)
 	 * already, but it's stuck on the kthreadd_done completion.
 	 */
 	system_state = SYSTEM_SCHEDULING;
-
+	pr_err("dll rest_init9");
 	complete(&kthreadd_done);
 
+	pr_err("dll rest_init10");
 	/*
 	 * The boot idle thread must execute schedule()
 	 * at least once to get things moving:
 	 */
 	schedule_preempt_disabled();
+	pr_err("dll rest_init11");
+	// rkp_copy_from_user_patch_on();
 	/* Call into cpu_idle with preempt disabled */
 	cpu_startup_entry(CPUHP_ONLINE);
+	// rkp_copy_from_user_patch_off();
+	pr_err("dll rest_init12");
 }
 
 /* Check for early params. */
@@ -636,55 +652,73 @@ asmlinkage __visible void __init start_kernel(void)
 	 * workqueue_init().
 	 */
 	workqueue_init_early();
-
+	pr_err("dll kernel start 1");
 	rcu_init();
-
+	pr_err("dll kernel start 1");
 	/* Trace events are available after this */
 	trace_init();
-
+	pr_err("dll kernel start 1");
 	if (initcall_debug)
 		initcall_debug_enable();
-
+	pr_err("dll kernel start 1");
 	context_tracking_init();
+	pr_err("dll kernel start 1");
 	/* init some links before init_ISA_irqs() */
 	early_irq_init();
+		pr_err("dll kernel start 1");
 	init_IRQ();
+		pr_err("dll kernel start 1");
 	tick_init();
+		pr_err("dll kernel start 1");
 	rcu_init_nohz();
+		pr_err("dll kernel start 1");
 	init_timers();
+		pr_err("dll kernel start 1");
 	hrtimers_init();
+		pr_err("dll kernel start 1");
 	softirq_init();
+		pr_err("dll kernel start 1");
 	timekeeping_init();
+		pr_err("dll kernel start 1");
 	time_init();
+		pr_err("dll kernel start 1");
 	printk_safe_init();
+		pr_err("dll kernel start 1");
 	perf_event_init();
+		pr_err("dll kernel start 1");
 	profile_init();
+		pr_err("dll kernel start 1");
 	call_function_init();
+		pr_err("dll kernel start 1");
 	WARN(!irqs_disabled(), "Interrupts were enabled early\n");
 
 	early_boot_irqs_disabled = false;
 	local_irq_enable();
 
 	kmem_cache_init_late();
-
+	pr_err("dll kernel start 41");
 	/*
 	 * HACK ALERT! This is early. We're enabling the console before
 	 * we've done PCI setups etc, and console_init() must be aware of
 	 * this. But we do want output early, in case something goes wrong.
 	 */
 	console_init();
+		pr_err("dll kernel start 40");
 	if (panic_later)
 		panic("Too many boot %s vars at `%s'", panic_later,
 		      panic_param);
-
+	pr_err("dll kernel start 39");
 	lockdep_init();
+		pr_err("dll kernel start 38");
 
 	/*
 	 * Need to run this when irqs are enabled, because it wants
 	 * to self-test [hard/soft]-irqs on/off lock inversion bugs
 	 * too:
 	 */
+		pr_err("dll kernel start 37");
 	locking_selftest();
+		pr_err("dll kernel start 36");
 
 	/*
 	 * This needs to be called before any devices perform DMA
@@ -693,6 +727,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * not cause "plain-text" data to be decrypted when accessed.
 	 */
 	mem_encrypt_init();
+		pr_err("dll kernel start 35");
 
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (initrd_start && !initrd_below_start_ok &&
@@ -704,47 +739,82 @@ asmlinkage __visible void __init start_kernel(void)
 	}
 #endif
 	kmemleak_init();
+		pr_err("dll kernel start 34");
 	setup_per_cpu_pageset();
+		pr_err("dll kernel start 33");
 	numa_policy_init();
+		pr_err("dll kernel start 32");
 	acpi_early_init();
+		pr_err("dll kernel start 31");
 	if (late_time_init)
 		late_time_init();
+			pr_err("dll kernel start 30");
 	sched_clock_init();
+		pr_err("dll kernel start 29");
 	calibrate_delay();
+		pr_err("dll kernel start 28");
 	pid_idr_init();
+		pr_err("dll kernel start 27");
 	anon_vma_init();
+		pr_err("dll kernel start 26");
 #ifdef CONFIG_X86
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		efi_enter_virtual_mode();
 #endif
+	pr_err("dll kernel start 25");
 	thread_stack_cache_init();
+		pr_err("dll kernel start 24");
 	cred_init();
+		pr_err("dll kernel start 23");
 	fork_init();
+		pr_err("dll kernel start 22");
 	proc_caches_init();
+		pr_err("dll kernel start 21");
 	uts_ns_init();
+		pr_err("dll kernel start 20");
 	buffer_init();
+		pr_err("dll kernel start 19");
 	key_init();
+		pr_err("dll kernel start 18");
 	security_init();
+		pr_err("dll kernel start 17");
 	dbg_late_init();
+		pr_err("dll kernel start 16");
 	vfs_caches_init();
+		pr_err("dll kernel start 15");
 	pagecache_init();
+		pr_err("dll kernel start 14");
 	signals_init();
+		pr_err("dll kernel start 13");
 	seq_file_init();
+		pr_err("dll kernel start 12");
 	proc_root_init();
+		pr_err("dll kernel start 11");
 	nsfs_init();
+		pr_err("dll kernel start 10");
 	cpuset_init();
+		pr_err("dll kernel start 9");
 	cgroup_init();
+		pr_err("dll kernel start 8");
 	taskstats_init_early();
+		pr_err("dll kernel start 7");
 	delayacct_init();
+		pr_err("dll kernel start 6");
 
 	check_bugs();
-
+	pr_err("dll kernel start 5");
 	acpi_subsystem_init();
+		pr_err("dll kernel start 4");
 	arch_post_acpi_subsys_init();
+		pr_err("dll kernel start 3");
 	sfi_init_late();
+		pr_err("dll kernel start 2");
 
 	/* Do the rest non-__init'ed, we're now alive */
 	arch_call_rest_init();
+		pr_err("dll kernel start 1");
+
+
 }
 
 /* Call all constructor functions linked into the kernel. */
@@ -1064,33 +1134,41 @@ static inline void mark_readonly(void)
 static int __ref kernel_init(void *unused)
 {
 	int ret;
-
+	pr_err("kernel_init0\n");
 	kernel_init_freeable();
+	pr_err("kernel_init1\n");
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
+	pr_err("kernel_init2\n");
 	ftrace_free_init_mem();
+	pr_err("kernel_init3\n");
 	free_initmem();
+	pr_err("kernel_init4\n");
 	mark_readonly();
+	pr_err("kernel_init5\n");
 
 	/*
 	 * Kernel mappings are now finalized - update the userspace page-table
 	 * to finalize PTI.
 	 */
 	pti_finalize();
-
+	pr_err("kernel_init6\n");
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
-
+	pr_err("kernel_init7\n");
 	rcu_end_inkernel_boot();
-
+	pr_err("kernel_init8\n");
 	if (ramdisk_execute_command) {
+	pr_err("kernel_init10\n");
 		ret = run_init_process(ramdisk_execute_command);
-		if (!ret)
+		pr_err("run_init_process3 finished %s %d",ramdisk_execute_command,ret);
+		if (!ret) {
 			return 0;
+		}
 		pr_err("Failed to execute %s (error %d)\n",
 		       ramdisk_execute_command, ret);
 	}
-
+	pr_err("kernel_init11\n");
 	/*
 	 * We try each of these until one succeeds.
 	 *
@@ -1098,17 +1176,23 @@ static int __ref kernel_init(void *unused)
 	 * trying to recover a really broken machine.
 	 */
 	if (execute_command) {
+		pr_err("kernel_init12\n");
 		ret = run_init_process(execute_command);
+		pr_err("run_init_process2 finished %s", execute_command);
 		if (!ret)
 			return 0;
+		pr_err("run_init_process2 error %s", execute_command);
 		panic("Requested init %s failed (error %d).",
 		      execute_command, ret);
 	}
+	pr_err("kernel_init13\n");
 	if (!try_to_run_init_process("/sbin/init") ||
 	    !try_to_run_init_process("/etc/init") ||
 	    !try_to_run_init_process("/bin/init") ||
-	    !try_to_run_init_process("/bin/sh"))
-		return 0;
+	    !try_to_run_init_process("/bin/sh")) {
+			pr_err("try_to_run_init_process finished");
+			return 0;
+		}
 
 	panic("No working init found.  Try passing init= option to kernel. "
 	      "See Linux Documentation/admin-guide/init.rst for guidance.");

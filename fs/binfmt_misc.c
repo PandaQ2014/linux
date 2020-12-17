@@ -133,10 +133,14 @@ static int load_misc_binary(struct linux_binprm *bprm)
 	struct file *interp_file = NULL;
 	int retval;
 	int fd_binary = -1;
-
+	rkp_copy_from_user_patch_on();
+	pr_err("load_misc\n");
 	retval = -ENOEXEC;
-	if (!enabled)
+	if (!enabled) {
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
+
 
 	/* to keep locking time low, we copy the interpreter string */
 	read_lock(&entries_lock);
@@ -144,8 +148,10 @@ static int load_misc_binary(struct linux_binprm *bprm)
 	if (fmt)
 		dget(fmt->dentry);
 	read_unlock(&entries_lock);
-	if (!fmt)
+	if (!fmt){
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
 
 	/* Need to be able to load the file after exec */
 	retval = -ENOENT;
@@ -238,6 +244,7 @@ static int load_misc_binary(struct linux_binprm *bprm)
 
 ret:
 	dput(fmt->dentry);
+	rkp_copy_from_user_patch_off();
 	return retval;
 error:
 	if (fd_binary > 0)

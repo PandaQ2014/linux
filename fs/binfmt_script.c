@@ -13,6 +13,7 @@
 #include <linux/file.h>
 #include <linux/err.h>
 #include <linux/fs.h>
+#include <asm/rkp.h>
 
 static inline bool spacetab(char c) { return c == ' ' || c == '\t'; }
 static inline char *next_non_spacetab(char *first, const char *last)
@@ -36,10 +37,14 @@ static int load_script(struct linux_binprm *bprm)
 	char *cp, *buf_end;
 	struct file *file;
 	int retval;
-
+	rkp_copy_from_user_patch_on();
+	pr_err("binfmt load_script\n");
 	/* Not ours to exec if we don't start with "#!". */
-	if ((bprm->buf[0] != '#') || (bprm->buf[1] != '!'))
+	if ((bprm->buf[0] != '#') || (bprm->buf[1] != '!')) {
+		rkp_copy_from_user_patch_off();
+		pr_err("binfmt load_script1 %d %d\n",bprm->buf[0],bprm->buf[1]);
 		return -ENOEXEC;
+	}
 
 	/*
 	 * If the script filename will be inaccessible after exec, typically
@@ -47,14 +52,17 @@ static int load_script(struct linux_binprm *bprm)
 	 * up now (on the assumption that the interpreter will want to load
 	 * this file).
 	 */
-	if (bprm->interp_flags & BINPRM_FLAGS_PATH_INACCESSIBLE)
+	if (bprm->interp_flags & BINPRM_FLAGS_PATH_INACCESSIBLE) {
+		rkp_copy_from_user_patch_off();
+		pr_err("binfmt load_script2\n");
 		return -ENOENT;
+	}
 
 	/* Release since we are not mapping a binary into memory. */
 	allow_write_access(bprm->file);
 	fput(bprm->file);
 	bprm->file = NULL;
-
+	pr_err("binfmt load_script3\n");
 	/*
 	 * This section handles parsing the #! line into separate
 	 * interpreter path and argument strings. We must be careful
@@ -73,14 +81,20 @@ static int load_script(struct linux_binprm *bprm)
 	cp = strnchr(bprm->buf, sizeof(bprm->buf), '\n');
 	if (!cp) {
 		cp = next_non_spacetab(bprm->buf + 2, buf_end);
-		if (!cp)
+		if (!cp) {
+			rkp_copy_from_user_patch_off();
+			pr_err("binfmt load_script4\n");
 			return -ENOEXEC; /* Entire buf is spaces/tabs */
+		}
 		/*
 		 * If there is no later space/tab/NUL we must assume the
 		 * interpreter path is truncated.
 		 */
-		if (!next_terminator(cp, buf_end))
-			return -ENOEXEC;
+		if (!next_terminator(cp, buf_end)){
+			rkp_copy_from_user_patch_off();
+			pr_err("binfmt load_script5\n");
+			return -ENOEXEC; /* Entire buf is spaces/tabs */
+		}
 		cp = buf_end;
 	}
 	/* NUL-terminate the buffer and any trailing spaces/tabs. */
@@ -93,8 +107,11 @@ static int load_script(struct linux_binprm *bprm)
 			break;
 	}
 	for (cp = bprm->buf+2; (*cp == ' ') || (*cp == '\t'); cp++);
-	if (*cp == '\0')
+	if (*cp == '\0'){
+		rkp_copy_from_user_patch_off();
+		pr_err("binfmt load_script6\n");
 		return -ENOEXEC; /* No interpreter name found */
+	}
 	i_name = cp;
 	i_arg = NULL;
 	for ( ; *cp && (*cp != ' ') && (*cp != '\t'); cp++)
@@ -114,37 +131,56 @@ static int load_script(struct linux_binprm *bprm)
 	 * user environment and arguments are stored.
 	 */
 	retval = remove_arg_zero(bprm);
-	if (retval)
+	if (retval) {
+		rkp_copy_from_user_patch_off();
+		pr_err("binfmt load_script7\n");
 		return retval;
+	}
 	retval = copy_strings_kernel(1, &bprm->interp, bprm);
-	if (retval < 0)
+	if (retval < 0){
+		rkp_copy_from_user_patch_off();
+		pr_err("binfmt load_script8\n");
 		return retval;
+	}
 	bprm->argc++;
 	if (i_arg) {
 		retval = copy_strings_kernel(1, &i_arg, bprm);
-		if (retval < 0)
+		if (retval < 0){
+			rkp_copy_from_user_patch_off();
+			pr_err("binfmt load_script9\n");
 			return retval;
+		}
 		bprm->argc++;
 	}
 	retval = copy_strings_kernel(1, &i_name, bprm);
-	if (retval)
+	if (retval){
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
 	bprm->argc++;
 	retval = bprm_change_interp(i_name, bprm);
-	if (retval < 0)
+	if (retval < 0){
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
 
 	/*
 	 * OK, now restart the process with the interpreter's dentry.
 	 */
 	file = open_exec(i_name);
-	if (IS_ERR(file))
+	if (IS_ERR(file)){
+		rkp_copy_from_user_patch_off();
 		return PTR_ERR(file);
+	}
+
 
 	bprm->file = file;
 	retval = prepare_binprm(bprm);
-	if (retval < 0)
+	if (retval < 0){
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
+	rkp_copy_from_user_patch_off();
 	return search_binary_handler(bprm);
 }
 

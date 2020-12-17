@@ -227,7 +227,7 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 		// 	//set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
 		// 	rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		// }
-		rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
+		rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));	
 		/*
 		 * After the PTE entry has been populated once, we
 		 * only allow updates to the permission attributes.
@@ -530,8 +530,8 @@ static void __create_pgd_mapping(pgd_t *pgdir, phys_addr_t phys,
 
 static phys_addr_t pgd_pgtable_alloc(void)
 {
-	//void *ptr = (void *)__get_free_page(PGALLOC_GFP);
-	void * ptr = phys_to_virt(rkp_allocPageTable());
+	void *ptr = (void *)__get_free_page(PGALLOC_GFP);
+	//void * ptr = phys_to_virt(rkp_allocPageTable());
 	if (!ptr || !pgtable_page_ctor(virt_to_page(ptr)))
 		BUG();
 

@@ -68,6 +68,7 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
+#include <asm/rkp.h>
 static void __unhash_process(struct task_struct *p, bool group_dead)
 {
 	nr_threads--;
@@ -770,22 +771,24 @@ static void check_stack_usage(void)
 #else
 static inline void check_stack_usage(void) {}
 #endif
-
+static int times = 0;
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
-
+	pr_err("do_exit %d",++times);
+	rkp_copy_from_user_patch_on();
 	profile_task_exit(tsk);
 	kcov_task_exit(tsk);
-
 	WARN_ON(blk_needs_flush_plug(tsk));
 
 	if (unlikely(in_interrupt()))
 		panic("Aiee, killing interrupt handler!");
 	if (unlikely(!tsk->pid))
 		panic("Attempted to kill the idle task!");
-
+	// if(times==1510) {
+	// 	panic("awsl");
+	// }
 	/*
 	 * If do_exit is called because this processes oopsed, it's possible
 	 * that get_fs() was left as KERNEL_DS, so reset it to USER_DS before
@@ -931,6 +934,7 @@ void __noreturn do_exit(long code)
 	exit_tasks_rcu_finish();
 
 	lockdep_free_task(tsk);
+	rkp_copy_from_user_patch_off();
 	do_task_dead();
 }
 EXPORT_SYMBOL_GPL(do_exit);

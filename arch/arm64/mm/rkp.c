@@ -13,6 +13,7 @@
 #include <linux/spinlock_types.h>
 #include <linux/arm-smccc.h>
 #include <linux/module.h>
+#include <asm/tlbflush.h>
 static int INITED = 0;
 static DEFINE_SPINLOCK(xchg_spin_lock);
 static DEFINE_SPINLOCK(ptmanager_spin_lock);
@@ -48,6 +49,7 @@ phys_addr_t rkp_allocPageTable(void){
         pr_err("TEESMC_OPTEED_RKP_PTM_GETAPT failed");
         return 0;
     }
+    pr_err("ALLOC 0x%016lx",res.a1);
     return res.a1;
 }
 void rkp_releasePageTable(phys_addr_t target){
@@ -64,6 +66,7 @@ void rkp_releasePageTable(phys_addr_t target){
     //     pr_err("TEESMC_OPTEED_RKP_PTM_RELEASEAPT failed");
     //     return;
     // }
+    pr_err("REALSE 0x%016lx",target);
     return;
 }
 
@@ -166,9 +169,12 @@ void* rkp_mem_set(void * buffer, int c, unsigned long n){
     arm_smccc_smc(TEESMC_OPTEED_RKP_MEM_SET, pa_buffer, c, n, 0, 0, 0, 0, &res);
     return (void *)res.a1;
 }
+volatile int tzc_started = 0;
+volatile int tzc_started_patch_on_for_fork = 0;
 void rkp_copy_from_user_patch_on(){
         struct arm_smccc_res res;
         spin_lock(&cfu_patch_spin_lock);
+        tzc_started = 1;
         arm_smccc_smc(TEESMC_OPTEED_RKP_CFU_PATCH, 1, 0, 0, 0, 0, 0, 0, &res);
         spin_unlock(&cfu_patch_spin_lock);
 }
@@ -176,10 +182,24 @@ void rkp_copy_from_user_patch_on(){
 void rkp_copy_from_user_patch_off(){
         struct arm_smccc_res res;
         spin_lock(&cfu_patch_spin_lock);
+        tzc_started = 1;
         arm_smccc_smc(TEESMC_OPTEED_RKP_CFU_PATCH, 0, 0, 0, 0, 0, 0, 0, &res);
         spin_unlock(&cfu_patch_spin_lock);
 }
+void rkp_copy_from_user_patch_on_for_fork(){
+    if (tzc_started == 0) {
+        return;
+    }
+    rkp_copy_from_user_patch_on();
+    tzc_started_patch_on_for_fork = 1;
+}
 
+void rkp_copy_from_user_patch_off_for_fork(){
+    if (tzc_started == 0 || tzc_started_patch_on_for_fork == 0) {
+        return;
+    }
+    rkp_copy_from_user_patch_off();
+}
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
 EXPORT_SYMBOL(rkp_mem_set);

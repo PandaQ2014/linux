@@ -8,6 +8,7 @@
 #include "sched.h"
 
 #include <trace/events/power.h>
+#include <asm/rkp.h>
 
 /* Linker adds these: start and end of __cpuidle functions */
 extern char __cpuidle_text_start[], __cpuidle_text_end[];
@@ -347,10 +348,14 @@ EXPORT_SYMBOL_GPL(play_idle);
 
 void cpu_startup_entry(enum cpuhp_state state)
 {
+	//rkp_copy_from_user_patch_on();
+	
 	arch_cpu_idle_prepare();
 	cpuhp_online_idle(state);
+	
 	while (1)
 		do_idle();
+	//rkp_copy_from_user_patch_off();
 }
 
 /*

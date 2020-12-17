@@ -90,6 +90,8 @@ void rkp_copy_from_user_patch_on(void);
 
 void rkp_copy_from_user_patch_off(void);
 
+void rkp_copy_from_user_patch_on_for_fork(void);
 
+void rkp_copy_from_user_patch_off_for_fork(void);
 
 #endif

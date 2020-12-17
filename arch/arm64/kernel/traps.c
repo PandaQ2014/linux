@@ -36,6 +36,7 @@
 #include <linux/syscalls.h>
 #include <linux/mm_types.h>
 #include <linux/kasan.h>
+#include <linux/printk.h>
 
 #include <asm/atomic.h>
 #include <asm/bug.h>
@@ -864,7 +865,6 @@ void __noreturn arm64_serror_panic(struct pt_regs *regs, u32 esr)
 		smp_processor_id(), esr, esr_get_class_string(esr));
 	if (regs)
 		__show_regs(regs);
-
 	nmi_panic(regs, "Asynchronous SError Interrupt");
 
 	cpu_park_loop();

@@ -98,6 +98,7 @@
 #include <asm/mmu_context.h>
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
+#include <asm/rkp.h>
 
 #include <trace/events/sched.h>
 
@@ -617,7 +618,6 @@ static inline int mm_alloc_pgd(struct mm_struct *mm)
 		return -ENOMEM;
 	return 0;
 }
-
 static inline void mm_free_pgd(struct mm_struct *mm)
 {
 	pgd_free(mm, mm->pgd);
@@ -2192,6 +2192,7 @@ struct task_struct *fork_idle(int cpu)
  * It copies the process, and if successful kick-starts
  * it and waits for it to finish using the VM if required.
  */
+static int times = 0;
 long _do_fork(unsigned long clone_flags,
 	      unsigned long stack_start,
 	      unsigned long stack_size,
@@ -2204,7 +2205,7 @@ long _do_fork(unsigned long clone_flags,
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
-
+	pr_err("_do_fork0 %d",times++);
 	/*
 	 * Determine whether and which event to report to ptracer.  When
 	 * called from kernel_thread or CLONE_UNTRACED is explicitly
@@ -2222,44 +2223,54 @@ long _do_fork(unsigned long clone_flags,
 		if (likely(!ptrace_event_enabled(current, trace)))
 			trace = 0;
 	}
-
+	pr_err("_do_fork1");
+	// if(times == 1605)
+	// 	panic("awsl");
 	p = copy_process(clone_flags, stack_start, stack_size,
 			 child_tidptr, NULL, trace, tls, NUMA_NO_NODE);
+	pr_err("_do_fork2");
 	add_latent_entropy();
-
-	if (IS_ERR(p))
+	pr_err("_do_fork3");
+	if (IS_ERR(p)){
+		pr_err("_do_fork4");
 		return PTR_ERR(p);
+	}
+	pr_err("_do_fork5");
 
 	/*
 	 * Do this prior waking up the new thread - the thread pointer
 	 * might get invalid after that point, if the thread exits quickly.
 	 */
 	trace_sched_process_fork(current, p);
-
+	pr_err("_do_fork6");
 	pid = get_task_pid(p, PIDTYPE_PID);
+	pr_err("_do_fork7");
+	//rkp_copy_from_user_patch_on_for_fork();
 	nr = pid_vnr(pid);
-
+	pr_err("_do_fork8");
 	if (clone_flags & CLONE_PARENT_SETTID)
 		put_user(nr, parent_tidptr);
-
+	pr_err("_do_fork9");
 	if (clone_flags & CLONE_VFORK) {
 		p->vfork_done = &vfork;
 		init_completion(&vfork);
 		get_task_struct(p);
 	}
-
+	pr_err("_do_fork10");
 	wake_up_new_task(p);
-
+	pr_err("_do_fork11");
 	/* forking complete and child started to run, tell ptracer */
 	if (unlikely(trace))
 		ptrace_event_pid(trace, pid);
-
+	pr_err("_do_fork12");
 	if (clone_flags & CLONE_VFORK) {
 		if (!wait_for_vfork_done(p, &vfork))
 			ptrace_event_pid(PTRACE_EVENT_VFORK_DONE, pid);
 	}
-
+	pr_err("_do_fork13");
 	put_pid(pid);
+	pr_err("_do_fork14");
+	//rkp_copy_from_user_patch_off_for_fork();
 	return nr;
 }
 
@@ -2272,8 +2283,10 @@ long do_fork(unsigned long clone_flags,
 	      int __user *parent_tidptr,
 	      int __user *child_tidptr)
 {
-	return _do_fork(clone_flags, stack_start, stack_size,
+	long res = _do_fork(clone_flags, stack_start, stack_size,
 			parent_tidptr, child_tidptr, 0);
+	pr_err("dll do_fork");
+	return long;
 }
 #endif
 
@@ -2282,8 +2295,10 @@ long do_fork(unsigned long clone_flags,
  */
 pid_t kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 {
-	return _do_fork(flags|CLONE_VM|CLONE_UNTRACED, (unsigned long)fn,
+	pid_t res = _do_fork(flags|CLONE_VM|CLONE_UNTRACED, (unsigned long)fn,
 		(unsigned long)arg, NULL, NULL, 0);
+	pr_err("dll kernel_thread");
+	return res;
 }
 
 #ifdef __ARCH_WANT_SYS_FORK

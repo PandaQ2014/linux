@@ -39,6 +39,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 static inline void pmd_free(struct mm_struct *mm, pmd_t *pmdp)
 {
+	pr_err("pmd_free");
 	BUG_ON((unsigned long)pmdp & (PAGE_SIZE-1));
 	//free_page((unsigned long)pmdp);
 	rkp_releasePageTable(virt_to_phys(pmdp));
@@ -70,6 +71,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 static inline void pud_free(struct mm_struct *mm, pud_t *pudp)
 {
+	pr_err("pud_free");
 	BUG_ON((unsigned long)pudp & (PAGE_SIZE-1));
 	//free_page((unsigned long)pudp);
 	rkp_releasePageTable(virt_to_phys(pudp));
@@ -124,14 +126,17 @@ pte_alloc_one(struct mm_struct *mm)
  */
 static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 {
-	if (ptep)
+	if (ptep){
+		pr_err("pte_free_kernel");
 		rkp_releasePageTable(virt_to_phys(ptep));
+	}
 		//free_page((unsigned long)ptep);
 }
 
 static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
 {
 	pgtable_page_dtor(pte);
+	pr_err("pte_free");
 	rkp_releasePageTable(page_to_phys(pte));
 	//__free_page(pte);
 }

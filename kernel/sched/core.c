@@ -13,6 +13,8 @@
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
+#include <asm/rkp.h>
+
 
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
@@ -2810,7 +2812,7 @@ asmlinkage __visible void schedule_tail(struct task_struct *prev)
 	__releases(rq->lock)
 {
 	struct rq *rq;
-
+	pr_err("schedule_tail0");
 	/*
 	 * New tasks start with FORK_PREEMPT_COUNT, see there and
 	 * finish_task_switch() for details.
@@ -2819,15 +2821,22 @@ asmlinkage __visible void schedule_tail(struct task_struct *prev)
 	 * and the preempt_enable() will end up enabling preemption (on
 	 * PREEMPT_COUNT kernels).
 	 */
-
+	
 	rq = finish_task_switch(prev);
+	pr_err("schedule_tail1");
 	balance_callback(rq);
+	pr_err("schedule_tail2");
 	preempt_enable();
-
+	pr_err("schedule_tail3");
 	if (current->set_child_tid)
 		put_user(task_pid_vnr(current), current->set_child_tid);
-
+	pr_err("schedule_tail4");
+	//rkp_copy_from_user_patch_on_for_fork();
+	pr_err("schedule_tail5");
 	calculate_sigpending();
+	pr_err("schedule_tail6");
+	//rkp_copy_from_user_patch_off_for_fork();
+	pr_err("schedule_tail7");
 }
 
 /*

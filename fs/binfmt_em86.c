@@ -17,7 +17,7 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/errno.h>
-
+#include <asm/rkp.h>
 
 #define EM86_INTERP	"/usr/bin/em86"
 #define EM86_I_NAME	"em86"
@@ -29,23 +29,30 @@ static int load_em86(struct linux_binprm *bprm)
 	struct file * file;
 	int retval;
 	struct elfhdr	elf_ex;
-
+	rkp_copy_from_user_patch_on();	
+	pr_err("load_em86\n");
 	/* Make sure this is a Linux/Intel ELF executable... */
 	elf_ex = *((struct elfhdr *)bprm->buf);
 
-	if (memcmp(elf_ex.e_ident, ELFMAG, SELFMAG) != 0)
+	if (memcmp(elf_ex.e_ident, ELFMAG, SELFMAG) != 0) {
+		rkp_copy_from_user_patch_off();	
 		return  -ENOEXEC;
+	}
+		
 
 	/* First of all, some simple consistency checks */
 	if ((elf_ex.e_type != ET_EXEC && elf_ex.e_type != ET_DYN) ||
 		(!((elf_ex.e_machine == EM_386) || (elf_ex.e_machine == EM_486))) ||
 		!bprm->file->f_op->mmap) {
-			return -ENOEXEC;
+		rkp_copy_from_user_patch_off();	
+		return  -ENOEXEC;
 	}
 
 	/* Need to be able to load the file after exec */
-	if (bprm->interp_flags & BINPRM_FLAGS_PATH_INACCESSIBLE)
-		return -ENOENT;
+	if (bprm->interp_flags & BINPRM_FLAGS_PATH_INACCESSIBLE){
+		rkp_copy_from_user_patch_off();	
+		return  -ENOENT;
+	}
 
 	allow_write_access(bprm->file);
 	fput(bprm->file);
@@ -68,15 +75,24 @@ static int load_em86(struct linux_binprm *bprm)
 	 */
 	remove_arg_zero(bprm);
 	retval = copy_strings_kernel(1, &bprm->filename, bprm);
-	if (retval < 0) return retval; 
+	if (retval < 0) {
+		rkp_copy_from_user_patch_off();	
+		return retval; 
+	} 
 	bprm->argc++;
 	if (i_arg) {
 		retval = copy_strings_kernel(1, &i_arg, bprm);
-		if (retval < 0) return retval; 
+		if (retval < 0) {
+			rkp_copy_from_user_patch_off();	
+			return retval; 
+		} 
 		bprm->argc++;
 	}
 	retval = copy_strings_kernel(1, &i_name, bprm);
-	if (retval < 0)	return retval;
+	if (retval < 0)	{
+		rkp_copy_from_user_patch_off();	
+		return retval; 
+	}
 	bprm->argc++;
 
 	/*
@@ -85,15 +101,19 @@ static int load_em86(struct linux_binprm *bprm)
 	 * space, and we don't need to copy it.
 	 */
 	file = open_exec(interp);
-	if (IS_ERR(file))
+	if (IS_ERR(file)) {
+		rkp_copy_from_user_patch_off();	
 		return PTR_ERR(file);
+	}
 
 	bprm->file = file;
 
 	retval = prepare_binprm(bprm);
-	if (retval < 0)
+	if (retval < 0) {
+		rkp_copy_from_user_patch_off();	
 		return retval;
-
+	}
+	rkp_copy_from_user_patch_off();	
 	return search_binary_handler(bprm);
 }
 

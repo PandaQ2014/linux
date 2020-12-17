@@ -71,7 +71,7 @@
 #include "internal.h"
 
 #include <trace/events/sched.h>
-
+#include <asm/rkp.h>
 int suid_dumpable = 0;
 
 static LIST_HEAD(formats);
@@ -503,7 +503,7 @@ static int copy_strings(int argc, struct user_arg_ptr argv,
 	char *kaddr = NULL;
 	unsigned long kpos = 0;
 	int ret;
-
+	rkp_copy_from_user_patch_on();
 	while (argc-- > 0) {
 		const char __user *str;
 		int len;
@@ -587,6 +587,7 @@ out:
 		kunmap(kmapped_page);
 		put_arg_page(kmapped_page);
 	}
+	rkp_copy_from_user_patch_off();
 	return ret;
 }
 
@@ -601,11 +602,11 @@ int copy_strings_kernel(int argc, const char *const *__argv,
 	struct user_arg_ptr argv = {
 		.ptr.native = (const char __user *const  __user *)__argv,
 	};
-
+	rkp_copy_from_user_patch_on();
 	set_fs(KERNEL_DS);
 	r = copy_strings(argc, argv, bprm);
 	set_fs(oldfs);
-
+	rkp_copy_from_user_patch_off();
 	return r;
 }
 EXPORT_SYMBOL(copy_strings_kernel);
@@ -1633,19 +1634,24 @@ EXPORT_SYMBOL(remove_arg_zero);
 /*
  * cycle the list of binary formats handler, until one recognizes the image
  */
+static int a = 0;
 int search_binary_handler(struct linux_binprm *bprm)
 {
 	bool need_retry = IS_ENABLED(CONFIG_MODULES);
 	struct linux_binfmt *fmt;
 	int retval;
-
+	rkp_copy_from_user_patch_on();
 	/* This allows 4 levels of binfmt rewrites before failing hard. */
-	if (bprm->recursion_depth > 5)
+	if (bprm->recursion_depth > 5) {
+		rkp_copy_from_user_patch_off();
 		return -ELOOP;
+	}
 
 	retval = security_bprm_check(bprm);
-	if (retval)
+	if (retval) {
+		rkp_copy_from_user_patch_off();
 		return retval;
+	}
 
 	retval = -ENOENT;
  retry:
@@ -1656,6 +1662,7 @@ int search_binary_handler(struct linux_binprm *bprm)
 		read_unlock(&binfmt_lock);
 		bprm->recursion_depth++;
 		retval = fmt->load_binary(bprm);
+		pr_err("load_binary finished! %d ",a++);
 		read_lock(&binfmt_lock);
 		put_binfmt(fmt);
 		bprm->recursion_depth--;
@@ -1663,10 +1670,16 @@ int search_binary_handler(struct linux_binprm *bprm)
 			/* we got to flush_old_exec() and failed after it */
 			read_unlock(&binfmt_lock);
 			force_sigsegv(SIGSEGV, current);
+			rkp_copy_from_user_patch_off();
+			pr_err("here1");
 			return retval;
 		}
 		if (retval != -ENOEXEC || !bprm->file) {
 			read_unlock(&binfmt_lock);
+			rkp_copy_from_user_patch_off();
+			pr_err("here2 %d",retval);
+			// if (a == 60)
+			// 	panic("aawsl");
 			return retval;
 		}
 	}
@@ -1674,14 +1687,21 @@ int search_binary_handler(struct linux_binprm *bprm)
 
 	if (need_retry) {
 		if (printable(bprm->buf[0]) && printable(bprm->buf[1]) &&
-		    printable(bprm->buf[2]) && printable(bprm->buf[3]))
-			return retval;
-		if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0)
-			return retval;
+		    printable(bprm->buf[2]) && printable(bprm->buf[3])){
+				rkp_copy_from_user_patch_off();
+				pr_err("here3");
+				return retval;
+			}
+		if (request_module("binfmt-%04x", *(ushort *)(bprm->buf + 2)) < 0){
+				rkp_copy_from_user_patch_off();
+				pr_err("here4");
+				return retval;
+			}
 		need_retry = false;
 		goto retry;
 	}
-
+	rkp_copy_from_user_patch_off();
+	pr_err("here5");
 	return retval;
 }
 EXPORT_SYMBOL(search_binary_handler);
@@ -1704,7 +1724,7 @@ static int exec_binprm(struct linux_binprm *bprm)
 		ptrace_event(PTRACE_EVENT_EXEC, old_vpid);
 		proc_exec_connector(current);
 	}
-
+	
 	return ret;
 }
 
@@ -1720,7 +1740,7 @@ static int __do_execve_file(int fd, struct filename *filename,
 	struct linux_binprm *bprm;
 	struct files_struct *displaced;
 	int retval;
-
+	rkp_copy_from_user_patch_on();
 	if (IS_ERR(filename))
 		return PTR_ERR(filename);
 
@@ -1741,17 +1761,20 @@ static int __do_execve_file(int fd, struct filename *filename,
 	current->flags &= ~PF_NPROC_EXCEEDED;
 
 	retval = unshare_files(&displaced);
-	if (retval)
+	if (retval) {
 		goto out_ret;
+	}
 
 	retval = -ENOMEM;
 	bprm = kzalloc(sizeof(*bprm), GFP_KERNEL);
-	if (!bprm)
+	if (!bprm) {
 		goto out_files;
+	}
 
 	retval = prepare_bprm_creds(bprm);
-	if (retval)
+	if (retval) {
 		goto out_free;
+	}
 
 	check_unsafe_exec(bprm);
 	current->in_execve = 1;
@@ -1759,8 +1782,10 @@ static int __do_execve_file(int fd, struct filename *filename,
 	if (!file)
 		file = do_open_execat(fd, filename, flags);
 	retval = PTR_ERR(file);
-	if (IS_ERR(file))
+	if (IS_ERR(file)) {
 		goto out_unmark;
+	}
+
 
 	sched_exec();
 
@@ -1791,35 +1816,42 @@ static int __do_execve_file(int fd, struct filename *filename,
 	bprm->interp = bprm->filename;
 
 	retval = bprm_mm_init(bprm);
-	if (retval)
+	if (retval) {
 		goto out_unmark;
+	}
+
 
 	retval = prepare_arg_pages(bprm, argv, envp);
-	if (retval < 0)
-		goto out;
+	if (retval < 0) {
+		goto out;	
+	}
 
 	retval = prepare_binprm(bprm);
-	if (retval < 0)
+	if (retval < 0) {
 		goto out;
-
+	}
+	pr_err("copy_strings0");
 	retval = copy_strings_kernel(1, &bprm->filename, bprm);
-	if (retval < 0)
-		goto out;
-
+	if (retval < 0) {
+		goto out;		
+	}
 	bprm->exec = bprm->p;
+	pr_err("copy_strings1");
 	retval = copy_strings(bprm->envc, envp, bprm);
-	if (retval < 0)
-		goto out;
-
+	if (retval < 0){	
+		goto out;		
+	}
+	pr_err("copy_strings2");
 	retval = copy_strings(bprm->argc, argv, bprm);
-	if (retval < 0)
-		goto out;
+	if (retval < 0){
+		goto out;		
+	}
 
 	would_dump(bprm, bprm->file);
-
 	retval = exec_binprm(bprm);
-	if (retval < 0)
-		goto out;
+	if (retval < 0){
+		goto out;		
+	}
 
 	/* execve succeeded */
 	current->fs->in_exec = 0;
@@ -1834,28 +1866,36 @@ static int __do_execve_file(int fd, struct filename *filename,
 		putname(filename);
 	if (displaced)
 		put_files_struct(displaced);
+	rkp_copy_from_user_patch_off();
+	pr_err("exec success");
 	return retval;
 
 out:
+	pr_err("out");
 	if (bprm->mm) {
 		acct_arg_size(bprm, 0);
 		mmput(bprm->mm);
 	}
 
 out_unmark:
+	pr_err("out_unmark");
 	current->fs->in_exec = 0;
 	current->in_execve = 0;
 
 out_free:
+	pr_err("out_free");
 	free_bprm(bprm);
 	kfree(pathbuf);
 
 out_files:
+	pr_err("out_files");
 	if (displaced)
 		reset_files_struct(displaced);
 out_ret:
+	pr_err("out_ret");
 	if (filename)
 		putname(filename);
+	rkp_copy_from_user_patch_off();
 	return retval;
 }
 

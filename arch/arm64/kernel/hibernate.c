@@ -41,7 +41,7 @@
 #include <asm/suspend.h>
 #include <asm/sysreg.h>
 #include <asm/virt.h>
-
+#include <asm/rkp.h>
 /*
  * Hibernate core relies on this value being 0 on resume, and marks it
  * __nosavedata assuming it will keep the resume kernel's '0' value. This
@@ -459,6 +459,7 @@ static int copy_page_tables(pgd_t *dst_pgdp, unsigned long start,
 	pgd_t *src_pgdp = pgd_offset_k(start);
 
 	dst_pgdp = pgd_offset_raw(dst_pgdp, start);
+	rkp_copy_from_user_patch_on();
 	do {
 		next = pgd_addr_end(addr, end);
 		if (pgd_none(READ_ONCE(*src_pgdp)))
@@ -466,7 +467,7 @@ static int copy_page_tables(pgd_t *dst_pgdp, unsigned long start,
 		if (copy_pud(dst_pgdp, src_pgdp, addr, next))
 			return -ENOMEM;
 	} while (dst_pgdp++, src_pgdp++, addr = next, addr != end);
-
+	rkp_copy_from_user_patch_off();
 	return 0;
 }
 

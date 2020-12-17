@@ -61,6 +61,8 @@
 #include <asm/pointer_auth.h>
 #include <asm/stacktrace.h>
 
+#include <asm/rkp.h>
+
 #if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)
 #include <linux/stackprotector.h>
 unsigned long __stack_chk_guard __read_mostly;
@@ -419,9 +421,8 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
 	}
 	p->thread.cpu_context.pc = (unsigned long)ret_from_fork;
 	p->thread.cpu_context.sp = (unsigned long)childregs;
-
+	
 	ptrace_hw_copy_thread(p);
-
 	return 0;
 }
 

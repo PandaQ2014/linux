@@ -28,6 +28,8 @@
 #include <linux/shmem_fs.h>
 #include <linux/pipe_fs_i.h>
 
+#include <asm/rkp.h>
+
 #include <trace/events/module.h>
 
 #define CAP_BSET	(void *)1
@@ -69,7 +71,6 @@ static int call_usermodehelper_exec_async(void *data)
 	struct subprocess_info *sub_info = data;
 	struct cred *new;
 	int retval;
-
 	spin_lock_irq(&current->sighand->siglock);
 	flush_signal_handlers(current, 1);
 	spin_unlock_irq(&current->sighand->siglock);
@@ -119,22 +120,32 @@ out:
 	 */
 	if (!(sub_info->wait & UMH_WAIT_PROC))
 		umh_complete(sub_info);
-	if (!retval)
+	pr_err("call_usermodehelper_exec_async 1");
+	if (!retval) {
+		pr_err("call_usermodehelper_exec_async 2");
 		return 0;
+	}
+	pr_err("call_usermodehelper_exec_async 3");
 	do_exit(0);
+	pr_err("call_usermodehelper_exec_async 4");
 }
 
 /* Handles UMH_WAIT_PROC.  */
 static void call_usermodehelper_exec_sync(struct subprocess_info *sub_info)
 {
 	pid_t pid;
-
+	pr_err("miaomiaomiao10");
 	/* If SIGCLD is ignored kernel_wait4 won't populate the status. */
 	kernel_sigaction(SIGCHLD, SIG_DFL);
+	pr_err("miaomiaomiao101");
 	pid = kernel_thread(call_usermodehelper_exec_async, sub_info, SIGCHLD);
+	pr_err("miaomiaomiao11");
+	rkp_copy_from_user_patch_on();
 	if (pid < 0) {
 		sub_info->retval = pid;
+		pr_err("miaomiaomiao12");
 	} else {
+		pr_err("miaomiaomiao13");
 		int ret = -ECHILD;
 		/*
 		 * Normally it is bogus to call wait4() from in-kernel because
@@ -147,7 +158,7 @@ static void call_usermodehelper_exec_sync(struct subprocess_info *sub_info)
 		 * Thus the __user pointer cast is valid here.
 		 */
 		kernel_wait4(pid, (int __user *)&ret, 0, NULL);
-
+		pr_err("miaomiaomiao14");
 		/*
 		 * If ret is 0, either call_usermodehelper_exec_async failed and
 		 * the real error code is already in sub_info->retval or
@@ -156,11 +167,13 @@ static void call_usermodehelper_exec_sync(struct subprocess_info *sub_info)
 		if (ret)
 			sub_info->retval = ret;
 	}
-
+	pr_err("miaomiaomiao15");
 	/* Restore default kernel sig handler */
 	kernel_sigaction(SIGCHLD, SIG_IGN);
-
+	pr_err("miaomiaomiao16");
 	umh_complete(sub_info);
+	pr_err("miaomiaomiao17");
+	rkp_copy_from_user_patch_off();
 }
 
 /*
@@ -179,11 +192,13 @@ static void call_usermodehelper_exec_sync(struct subprocess_info *sub_info)
  */
 static void call_usermodehelper_exec_work(struct work_struct *work)
 {
+	pr_err("miaomiaomiao120");
 	struct subprocess_info *sub_info =
 		container_of(work, struct subprocess_info, work);
-
+	pr_err("miaomiaomiao121");
 	if (sub_info->wait & UMH_WAIT_PROC) {
 		call_usermodehelper_exec_sync(sub_info);
+		pr_err("miaomiaomiao122");
 	} else {
 		pid_t pid;
 		/*
@@ -193,10 +208,12 @@ static void call_usermodehelper_exec_work(struct work_struct *work)
 		 */
 		pid = kernel_thread(call_usermodehelper_exec_async, sub_info,
 				    CLONE_PARENT | SIGCHLD);
+		pr_err("miaomiaomiao123");
 		if (pid < 0) {
 			sub_info->retval = pid;
 			umh_complete(sub_info);
 		}
+		pr_err("miaomiaomiao124");
 	}
 }
 
