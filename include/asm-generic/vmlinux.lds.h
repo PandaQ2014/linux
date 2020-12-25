@@ -1,4 +1,12 @@
 /*
+ *项目名：pkm
+ *作者：北京邮电大学
+ *时间：2020年12月24日
+ *修改内容：
+ *  第803行：添加 INIT_CALLS_LEVEL(8)，定义__initcall8_start
+*/
+
+/*
  * Helper macros to support writing architecture specific
  * linker scripts.
  *

@@ -1,4 +1,14 @@
 /*
+ *项目名：pkm
+ *作者：北京邮电大学
+ *时间：2020年12月24日
+ *修改内容：
+ *  第45行：引入linux/arm-smccc.h头文件
+ *  第788行-第792行：在map_kernel函数中添加smc指令将需要保护的内存区间的首尾地址传至sw中
+*/
+
+
+/*
  * Based on arch/arm/mm/mmu.c
  *
  * Copyright (C) 1995-2005 Russell King
@@ -775,11 +785,11 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * Only rodata will be remapped with different permissions later on,
 	 * all other segments are allowed to use contiguous mappings.
 	 */
-    phys_addr_t ro_start = __pa_symbol(_text);
-	phys_addr_t ro_end = __pa_symbol(_etext);
+    phys_addr_t ro_start = __pa_symbol(_text);//获取_text符号的物理地址
+	phys_addr_t ro_end = __pa_symbol(__inittext_begin);//获取__inittext_begin符号的物理地址
 	struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(40); 
-	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);
+	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);//smc指令
 
 	map_kernel_segment(pgdp, _text, _etext, PAGE_KERNEL_EXEC, &vmlinux_text, 0,
 			   VM_NO_GUARD);

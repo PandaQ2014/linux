@@ -1,3 +1,12 @@
+/*
+ *项目名：pkm
+ *作者：北京邮电大学
+ *时间：2020年12月24日
+ *修改内容：
+ *  第239行：添加#define pkm_initcall(fn)		__define_initcall(fn, 8)，定义pkm_initcall宏
+*/
+
+
 /* SPDX-License-Identifier: GPL-2.0 */
 #ifndef _LINUX_INIT_H
 #define _LINUX_INIT_H

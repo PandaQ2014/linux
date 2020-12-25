@@ -1,4 +1,23 @@
 /*
+ *项目名：pkm
+ *作者：北京邮电大学
+ *时间：2020年12月25日
+ *修改内容：
+ *  导入头文件
+ *  第166行：添加 void pkm_kernel_thread(void); pkm_kernel_thread函数声明
+ *  第998行：添加 extern initcall_entry_t __initcall8_start[];  使__initcall8_start[]可以被别的文件引用
+ *  第010行：添加 __initcall8_start  元素
+ *  第1024行：添加 "pkm" 元素
+ *  第1400行：添加 pkm_initcall(pkm_kernel_thread);  调用定义好的pkm_initcall，使系统启动时自动执行pkm_kernel_thread函数
+ *  第1395行-第1399行：定义pkm_kernel_thread函数，函数体中的三条语句是创建并启动三个线程（即线程环中的三个线程），A是工作线程，执行pkm保护和监控工作，B和C都是监控线程，执行监控工作
+ *  第1273行-第1319行：pkm_kernel_thread_func函数定义
+ *  第1322行-第3901353行：pkm_kernel_thread_monitor1函数定义
+ *  第1356行-第行：pkm_kernel_thread_monitor2函数定义
+ *  第796行-第805行：在start_kernel函数中添加，使用smc指令向sw中传递selinux_enabled和selinux.enforcing的初始值
+
+*/
+
+/*
  *  linux/init/main.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
@@ -777,12 +796,12 @@ asmlinkage __visible void __init start_kernel(void)
     struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(52);
 	selinux_state.enforcing = 1;
-	pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
-	pr_info("selinux_state.enforcing:%d,addr:%016llx\n",selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
+	//pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
+	//pr_info("selinux_state.enforcing:%d,addr:%016llx\n",selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
 	phys_addr_t pa_enabled = __pa_symbol(&selinux_enabled);
 	phys_addr_t pa_enforcing = __pa_symbol(&selinux_state.enforcing);
-	pr_info("pa_enabled:%016llx",pa_enabled);
-	pr_info("pa_enforcing:%016llx",pa_enforcing);
+	//pr_info("pa_enabled:%016llx",pa_enabled);
+	//pr_info("pa_enforcing:%016llx",pa_enforcing);
 	arm_smccc_smc(smcid, pa_enabled, pa_enforcing, 0, 0, 0, 0, 0, &res);
 
 	check_bugs();
@@ -1253,8 +1272,8 @@ static noinline void __init kernel_init_freeable(void)
 
 int pkm_kernel_thread_func(void *data){
     ssleep(2);
-    struct arm_smccc_res res_50,res_51,res_52;
-    uint32_t smcid=TEESMC_OPTEED_RV(50);    
+    struct arm_smccc_res res_50,res_51,res_52;//存储smc指令返回内容
+    uint32_t smcid=TEESMC_OPTEED_RV(50);//设置smc指令id
     uint32_t smcid_51 = TEESMC_OPTEED_RV(51); 
     uint32_t smcid_52 = TEESMC_OPTEED_RV(52); 
     memset(&res_51, 0, sizeof(res_51));
@@ -1263,47 +1282,31 @@ int pkm_kernel_thread_func(void *data){
 
     unsigned long monitor_B_time,monitor_B_time_now;
     
-    struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);
-    //unsigned long master_time=get_seconds();
+    struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
     while(1){
-        //pr_emerg("%016llx",(unsigned long long int)__pa_symbol(_text));
-
-        arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);
-        //pr_emerg("aaaaaaaaaaaaaaaaaaaaaaaaa........%d,%d,%d,%d.......!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",res_51.a0,res_51.a1,res_51.a2,res_51.a3); 
-        if(res_51.a0==0)
-            panic("there is an error...................");
-		// pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
-		// pr_info("selinux_state.disabled:%d,addr:%016llx\nselinux_state.enforcing:%d,addr:%016llx\n",selinux_state.disabled,(unsigned long long)&selinux_state.disabled,selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
-        arm_smccc_smc(smcid_52,0,0,0,0,0,0,0,&res_52);		
+        arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);//smc指令，51号smc指令是在sw中执行只读代码保护
+        if(res_51.a0==0)//如果返回的a0值为0，说明检测到了错误，触发panic
+            panic("error");
+        arm_smccc_smc(smcid_52,0,0,0,0,0,0,0,&res_52);//smc指令，51号smc指令是在sw中执行selinux保护		
         if(res_52.a0==0)
-            panic("there is an error...................");
-
-
-        //pr_emerg("主线程000000000000000000000000000.。。。。。。。。。。。。。。。%d,%d",monitor_B->pid,monitor_B->pid); 
-        arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res_50);        
-        if(res_50.a0==0)
-            panic("there is an error...................");
-        mdelay(2000);
-        ssleep(2);
-        if (IS_ERR(monitor_B))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+            panic("error");
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(monitor_B))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
         {
-            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
             panic("error");
         }
         else{
-            if(monitor_B->state==2)
-                monitor_B_time=get_seconds();
+            if(monitor_B->state==2)//判断所监控线程的task_struct结构体状态
+                monitor_B_time=get_seconds();//获取现在的时间
             else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32||monitor_B->state==128){
-                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
             }
             else
                 ;
             while(monitor_B->state==2){
                 monitor_B_time_now=get_seconds();
-                //pr_emerg("A时间1：%u，时间2：%u，时间差：%u",monitor_B_time_now,monitor_B_time,monitor_B_time_now-monitor_B_time); 
-                if (monitor_B_time_now-monitor_B_time>5){
-                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                if (monitor_B_time_now-monitor_B_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
                     break; 
                 }
@@ -1318,33 +1321,26 @@ int pkm_kernel_thread_func(void *data){
 
 int pkm_kernel_thread_monitor1(void *data){
     ssleep(2);
-
-    unsigned long monitor_C_time,monitor_C_time_now;
-    
-    struct task_struct *monitor_C=list_entry(current->sibling.next,struct task_struct,sibling);
+    unsigned long monitor_C_time,monitor_C_time_now;    
+    struct task_struct *monitor_C=list_entry(current->sibling.next,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
     while(1){
-        //pr_emerg("监控线程111111111111111.。。。。。。。。。。。。。。。%d,%d",monitor_C->pid,monitor_C->pid); 
-        mdelay(2000);
-        ssleep(2);
-        if (IS_ERR(monitor_C))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(monitor_C))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
             {
-            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
             panic("error");
             }
         else{
-            if(monitor_C->state==2)
+            if(monitor_C->state==2)//判断所监控线程的task_struct结构体状态
                 monitor_C_time=get_seconds();
             else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32||monitor_C->state==128){
-                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
             }
             else
                 ;
             while(monitor_C->state==2){
                 monitor_C_time_now=get_seconds();
-                //pr_emerg("B时间1：%u，时间2：%u，时间差：%u",monitor_C_time_now,monitor_C_time,monitor_C_time_now-monitor_C_time); 
-                if (monitor_C_time_now-monitor_C_time>5){
-                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                if (monitor_C_time_now-monitor_C_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
                     break; 
                 }
@@ -1362,34 +1358,26 @@ int pkm_kernel_thread_monitor2(void *data){
 
     unsigned long monitor_A_time,monitor_A_time_now;
 
-    struct task_struct *master_A=list_entry(current->sibling.prev->prev,struct task_struct,sibling);
+    struct task_struct *master_A=list_entry(current->sibling.prev->prev,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
     while(1){
-        //pr_emerg("监控线程222222222222222.。。。。。。。。。。。。。。。%d,%d",master_A->pid,master_A->pid); 
-        mdelay(2000);
-        ssleep(2);
-        /*
-            下面这段代码是检测线程是否一直活着或者被挂起时间太长的
-        */
-        if (IS_ERR(master_A))//如果错误，则变量已经不存在，那么说明线程已经挂掉死了
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(master_A))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
         {
-            pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
             panic("error");
         }
         else{
-            if(master_A->state==2)
+            if(master_A->state==2)//判断所监控线程的task_struct结构体状态
                 monitor_A_time=get_seconds();
             else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32 ||master_A->state==128)                     
             {
-                pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
                 panic("error");
             }
             else
                 ;
             while(master_A->state==2){
                 monitor_A_time_now=get_seconds();
-                //pr_emerg("C时间1：%u，时间2：%u，时间差：%u",monitor_A_time_now,monitor_A_time,monitor_A_time_now-monitor_A_time); 
-                if (monitor_A_time_now-monitor_A_time>5){
-                    pr_emerg("there is a error ...............!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); 
+                if (monitor_A_time_now-monitor_A_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
                     break;
                 } 
@@ -1404,7 +1392,7 @@ int pkm_kernel_thread_monitor2(void *data){
 
 
 void pkm_kernel_thread(){
-    struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");
+    struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");//创建内核线程
     struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
     struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
 }
