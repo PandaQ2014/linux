@@ -98,17 +98,16 @@ void rkp_setPageTableElement(int pageTableType,unsigned long * va, unsigned long
     return;
 }
 
-void rkp_instruction_simulation(unsigned long instr_mark,unsigned long param2,
-                                unsigned long param3,unsigned long param4){
+void rkp_instruction_simulation(unsigned long instruction,unsigned long param1,
+                                unsigned long param2,unsigned long param3){
     struct arm_smccc_res res;
     // memset(&res, 0, sizeof(res));
-    arm_smccc_smc(TEESMC_OPTEED_RKP_INSTR_SIMULATION, instr_mark, param2, param3, param4, 0, 0, 0, &res);
+    arm_smccc_smc(TEESMC_OPTEED_RKP_INSTR_SIMULATION, instruction, param1, param2, param3, 0, 0, 0, &res);
     // if(res.a0 != 0){
     //     pr_err("TEESMC_OPTEED_RKP_INSTR_SIMULATION failed");
     //     return;
     // }
     return;    
-
 }
 unsigned long rkp_xchg_relaxed(int ptType,unsigned long* ptePtr, unsigned long newVal){
     unsigned long oldVal = 0;

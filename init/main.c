@@ -1006,11 +1006,17 @@ static void __init do_pre_smp_initcalls(void)
 
 static int run_init_process(const char *init_filename)
 {
+	int ret = 99;
 	argv_init[0] = init_filename;
 	pr_info("Run %s as init process\n", init_filename);
-	return do_execve(getname_kernel(init_filename),
+	ret = do_execve(getname_kernel(init_filename),
 		(const char __user *const __user *)argv_init,
 		(const char __user *const __user *)envp_init);
+	pr_info("run_init_process ret: %d", ret);
+	return ret;
+	// return do_execve(getname_kernel(init_filename),
+	// 	(const char __user *const __user *)argv_init,
+	// 	(const char __user *const __user *)envp_init);
 }
 
 static int try_to_run_init_process(const char *init_filename)

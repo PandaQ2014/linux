@@ -326,8 +326,211 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 				// 	regs->user_regs.pc+=4;
 				// 	return;
 				// }
-				pr_err("wirte to read only address pa: 0x%016llx pc: 0x%08x",pa,**(unsigned int **)&(regs->user_regs.pc));
+				// pr_info("wirte to read only address, va: 0x%016lx pa: 0x%016llx insns: 0x%08x", addr, pa, **(unsigned int **)&(regs->user_regs.pc));
+				int debug = 0;
+				if(debug)pr_info("wirte to read only address, va: 0x%016lx pa: 0x%016llx insns: 0x%08x", addr, pa, *(unsigned int *)(regs->user_regs.pc));
+				u_int32_t instruction = *(unsigned int *)(regs->user_regs.pc);
+				u_int64_t reg_x3 = *(unsigned long long *)(regs->user_regs.regs + 3);
+				u_int64_t reg_x6 = *(unsigned long long *)(regs->user_regs.regs + 6);
+				u_int64_t reg_x7 = *(unsigned long long *)(regs->user_regs.regs + 7);
+				u_int64_t reg_x8 = *(unsigned long long *)(regs->user_regs.regs + 8);
+				u_int64_t reg_x9 = *(unsigned long long *)(regs->user_regs.regs + 9);
+				u_int64_t reg_x10 = *(unsigned long long *)(regs->user_regs.regs + 10);
+				u_int64_t reg_x11 = *(unsigned long long *)(regs->user_regs.regs + 11);
+				u_int64_t reg_x12 = *(unsigned long long *)(regs->user_regs.regs + 12);
+				u_int64_t reg_x13 = *(unsigned long long *)(regs->user_regs.regs + 13);
+				u_int64_t reg_x14 = *(unsigned long long *)(regs->user_regs.regs + 14);
+				// u_int64_t reg_x3 = regs->regs[3];
+				// u_int64_t reg_x6 = regs->regs[6];
+				// u_int64_t reg_x7 = regs->regs[7];
+				// u_int64_t reg_x8 = regs->regs[8];
+				// pr_info("reg_x3: 0x%016llx, reg_x6: 0x%016llx, reg_x7: 0x%016llx, reg_x8: 0x%016llx", reg_x3, reg_x6, reg_x7, reg_x8);
+				phys_addr_t ins_write_pa;
+				u_int64_t ins_write_va;
 
+				switch (instruction) {
+					// instruction in __memset()
+					case 0x39000107:
+						if(debug)pr_info("strb w7, [x8] to be simulated");
+						ins_write_pa = virt_to_phys(reg_x8);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x8);
+						rkp_instruction_simulation(instruction, reg_x7, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
+						flush_tlb_all();
+						break;
+					case 0x78002507:
+						if(debug)pr_info("strh w7, [x8], #2 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x8);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x8);
+						rkp_instruction_simulation(instruction, reg_x7, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
+						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 2;
+						if(debug)pr_info("x8 + 2 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
+						flush_tlb_all();
+						break;
+					case 0xb8004507:
+						if(debug)pr_info("str w7, [x8], #4 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x8);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x8);
+						rkp_instruction_simulation(instruction, reg_x7, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
+						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 4;
+						if(debug)pr_info("x8 + 4 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
+						flush_tlb_all();
+						break;
+					case 0xf8008507:
+						if(debug)pr_info("str x7, [x8], #8 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x8);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x8);
+						rkp_instruction_simulation(instruction, reg_x7, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
+						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 8;
+						if(debug)pr_info("x8 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
+						flush_tlb_all();
+						break;
+					
+					case 0xa9001d07:
+						if(debug)pr_info("stp x7, x7, [x8] to be simulated");
+						ins_write_pa = virt_to_phys(reg_x8);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x8, *(u_int64_t *)(reg_x8 + 8));
+						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x8, *(u_int64_t *)(reg_x8 + 8));
+						flush_tlb_all();
+						break;
+					case 0xa9011d07:
+						if(debug)pr_info("stp x7, x7, [x8, #0x10] to be simulated");
+						ins_write_va = reg_x8 + 0x10;
+						ins_write_pa = virt_to_phys(ins_write_va);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						flush_tlb_all();
+						break;
+					case 0xa9021d07:
+						if(debug)pr_info("stp x7, x7, [x8, #0x20] to be simulated");
+						ins_write_va = reg_x8 + 0x20;
+						ins_write_pa = virt_to_phys(ins_write_va);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						flush_tlb_all();
+						break;
+					case 0xa9031d07:
+						if(debug)pr_info("stp x7, x7, [x8, #0x30] to be simulated");
+						ins_write_va = reg_x8 + 0x30;
+						ins_write_pa = virt_to_phys(ins_write_va);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
+						flush_tlb_all();
+						break;
+					case 0xd50b7428:
+						if(debug)pr_info("dc zva, x8 to be simulated");
+						unsigned long dczid_el0 = 0;
+						int len = 0;
+						ins_write_va = reg_x8;
+						ins_write_pa = virt_to_phys(ins_write_va);
+						__asm__ __volatile__("mrs %0, dczid_el0":"=r"(dczid_el0));
+						len = 1 << (dczid_el0 + 2);
+						if(debug)pr_info("dczid_el0: 0x%016lx, len: %d", dczid_el0, len);
+						if(debug)pr_info("content_before: |0x%016lx | 0x%016lx | 0x%016lx | 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8), *(u_int64_t *)(ins_write_va + 1008), *(u_int64_t *)(ins_write_va + 1016));
+						rkp_instruction_simulation(instruction, 0, 0, ins_write_pa);
+						if(debug)pr_info("content_after: |0x%016lx | 0x%016lx | 0x%016lx | 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8), *(u_int64_t *)(ins_write_va + 1008), *(u_int64_t *)(ins_write_va + 1016));
+						flush_tlb_all();
+						break;
+
+					// instruction in __arch_copy_from_user()
+					case 0xf80084c3:
+						if(debug)pr_info("str x3, [x6], #8 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x6);
+						rkp_instruction_simulation(instruction, reg_x3, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 8;
+						if(debug)pr_info("x6 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0xb80044c3:
+						if(debug)pr_info("str w3, [x6], #4 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x6);
+						rkp_instruction_simulation(instruction, reg_x3, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 4;
+						if(debug)pr_info("x6 + 4 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0x780024c3:
+						if(debug)pr_info("strh w3, [x6], #2 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x6);
+						rkp_instruction_simulation(instruction, reg_x3, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 2;
+						if(debug)pr_info("x6 + 2 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0x380014c3:
+						if(debug)pr_info("strb w3, [x6], #1 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx, w3: 0x%016lx", *(u_int64_t *)reg_x6, reg_x3);
+						rkp_instruction_simulation(instruction, reg_x3, 0, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 1;
+						if(debug)pr_info("x6 + 1 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+
+					case 0xa88120c7:
+						if(debug)pr_info("stp x7, x8, [x6], #0x10 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						rkp_instruction_simulation(instruction, reg_x7, reg_x8, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
+						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0xa88128c9:
+						if(debug)pr_info("stp x9, x10, [x6], #0x10 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						rkp_instruction_simulation(instruction, reg_x9, reg_x10, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
+						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0xa88130cb:
+						if(debug)pr_info("stp x11, x12, [x6], #0x10 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						rkp_instruction_simulation(instruction, reg_x11, reg_x12, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
+						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					case 0xa88138cd:
+						if(debug)pr_info("stp x13, x14, [x6], #0x10 to be simulated");
+						ins_write_pa = virt_to_phys(reg_x6);
+						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						rkp_instruction_simulation(instruction, reg_x13, reg_x14, ins_write_pa);
+						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
+						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
+						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
+						flush_tlb_all();
+						break;
+					
+					default:
+						pr_info("unsolved instruction: 0x%08x", instruction);
+						panic("test");
+						dump_stack();
+						break;
+				}
+
+				regs->user_regs.pc += 4;
+				return;
 			}
 			msg = "write to read-only memory";
 		}
