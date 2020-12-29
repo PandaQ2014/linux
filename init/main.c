@@ -3,18 +3,18 @@
  *作者：北京邮电大学
  *时间：2020年12月25日
  *修改内容：
- *  导入头文件
- *  第166行：添加 void pkm_kernel_thread(void); pkm_kernel_thread函数声明
- *  第998行：添加 extern initcall_entry_t __initcall8_start[];  使__initcall8_start[]可以被别的文件引用
- *  第010行：添加 __initcall8_start  元素
- *  第1024行：添加 "pkm" 元素
- *  第1400行：添加 pkm_initcall(pkm_kernel_thread);  调用定义好的pkm_initcall，使系统启动时自动执行pkm_kernel_thread函数
- *  第1395行-第1399行：定义pkm_kernel_thread函数，函数体中的三条语句是创建并启动三个线程（即线程环中的三个线程），A是工作线程，执行pkm保护和监控工作，B和C都是监控线程，执行监控工作
- *  第1273行-第1319行：pkm_kernel_thread_func函数定义
- *  第1322行-第3901353行：pkm_kernel_thread_monitor1函数定义
- *  第1356行-第行：pkm_kernel_thread_monitor2函数定义
- *  第796行-第805行：在start_kernel函数中添加，使用smc指令向sw中传递selinux_enabled和selinux.enforcing的初始值
-
+ *  第121行-第158行：导入头文件
+ *  第165行：添加pkm_kernel_thread函数声明；此处修改属于内核线程环监控功能
+ *  第997行：使用extern修饰__initcall8_start[]，使__initcall8_start[]可以被别的文件引用；此处修改属于内核线程环监控功能
+ *  第1009行：添加__initcall8_start元素，以便do_initcalls函数调用do_initcall_level(8)；此处修改属于内核线程环监控功能
+ *  第1023行：添加 "pkm" 元素,用于标记pkm_inicall级别的函数；此处修改属于内核线程环监控功能
+ *  第1399行：调用pkm_initcall(pkm_kernel_thread)，将pkm_kenrnel_thread函数指针放到相应的段中，使系统启动时自动执行pkm_kernel_thread函数；此处修改属于内核线程环监控功能
+ *  第1394行-第1398行：定义pkm_kernel_thread函数，函数体中的三条语句是创建并启动三个线程（即线程环中的三个线程），A是工作线程，执行pkm保护和监控工作，B和C都是监控线程，执行监控工作；此处修改属于内核线程环监控功能
+ *  第1273行-第1319行：pkm_kernel_thread_func函数定义，执行只读代码段保护功能、selinux保护功能和内核线程环的监控工作；此处修改属于内核线程环监控功能、只读代码段保护功能和selinux保护功能
+ *  第1322行-第1353行：pkm_kernel_thread_monitor1函数定义，执行内核线程环的监控工作；此处修改属于内核线程环监控功能
+ *  第1356行-第1390行：pkm_kernel_thread_monitor2函数定义，执行内核线程环的监控工作；此处修改属于内核线程环监控功能
+ *  第796行-第805行：在start_kernel函数中添加，使用smc指令向sw中传递selinux_enabled和selinux.enforcing的初始值；此处修改属于selinux保护功能
+ *  第1256行-第1271行：导入必要头文件和宏定义；此处修改属于内核线程环监控功能
 */
 
 /*

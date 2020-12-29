@@ -3,7 +3,7 @@
  *作者：北京邮电大学
  *时间：2020年12月24日
  *修改内容：
- *  第803行：添加 INIT_CALLS_LEVEL(8)，定义__initcall8_start
+ *  第803行：定义__initcall8_start，并将其关联到.initcall8.init和.initcall8s.init段；此处修改属于内核线程环监控功能
 */
 
 /*

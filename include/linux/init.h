@@ -3,7 +3,7 @@
  *作者：北京邮电大学
  *时间：2020年12月24日
  *修改内容：
- *  第239行：添加#define pkm_initcall(fn)		__define_initcall(fn, 8)，定义pkm_initcall宏
+ *  第239行：添加宏定义，在调用pkm_initcall(fn)时就相当于调用__define_initcall(fn,8)，它的作用是将函数fn的指针放到相应的代码段中；此处修改属于内核线程环监控功能
 */
 
 
