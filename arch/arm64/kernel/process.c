@@ -268,10 +268,12 @@ void __show_regs(struct pt_regs *regs)
 	print_pstate(regs);
 
 	if (!user_mode(regs)) {
-		printk("pc : %pS\n", (void *)regs->pc);
+		// printk("pc : %pS\n", (void *)regs->pc);
+		printk("pc : %pS instr: 0x%08x\n", (void *)regs->pc, *(unsigned int *)(regs->pc));
 		printk("lr : %pS\n", (void *)lr);
 	} else {
-		printk("pc : %016llx\n", regs->pc);
+		// printk("pc : %016llx\n", regs->pc);
+		printk("pc : %016llx instr: 0x%08x\n", regs->pc, *(unsigned int *)(regs->pc));
 		printk("lr : %016llx\n", lr);
 	}
 

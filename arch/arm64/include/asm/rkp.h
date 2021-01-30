@@ -57,6 +57,9 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH 28
 #define TEESMC_OPTEED_RKP_CFU_PATCH \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH)
+#define TEESMC_OPTEED_FUNCID_RKP_TZC_SET_ACTION 29
+#define TEESMC_OPTEED_RKP_TZC_SET_ACTION \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_TZC_SET_ACTION)
 
 
 
@@ -90,6 +93,6 @@ void rkp_copy_from_user_patch_on(void);
 
 void rkp_copy_from_user_patch_off(void);
 
-
+void rkp_tzc_set_aciton(int action);
 
 #endif

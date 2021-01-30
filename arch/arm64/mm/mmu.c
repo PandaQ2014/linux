@@ -220,13 +220,15 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 	do {
 		pte_t old_pte = READ_ONCE(*ptep);
 		if(rkp_paIsManaged(phys)){
-			pr_err("rkp_paIsManaged 0x%016llx",phys); 
+			pr_err("rkp_paIsManaged 0x%016llx",phys);
 			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
+			// pr_info("init_pte | pte: 0x%016lx", *(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
 			// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 			//PAGE_KERNEL_RO PAGE_HYP_RO
 		}else{
 			//set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
 			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
+			// pr_info("init_pte | pte: 0x%016lx", *(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		}
 		// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		/*

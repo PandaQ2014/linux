@@ -179,8 +179,14 @@ void rkp_copy_from_user_patch_off(){
         spin_unlock(&cfu_patch_spin_lock);
 }
 
+void rkp_tzc_set_aciton(int action) {
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_RKP_TZC_SET_ACTION, action, 0, 0, 0, 0, 0, 0, &res);
+}
+
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
 EXPORT_SYMBOL(rkp_mem_set);
 EXPORT_SYMBOL(rkp_copy_from_user_patch_on);
 EXPORT_SYMBOL(rkp_copy_from_user_patch_off);
+EXPORT_SYMBOL(rkp_tzc_set_aciton);

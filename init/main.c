@@ -98,6 +98,7 @@
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
+#include <asm/rkp.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
@@ -1147,6 +1148,8 @@ static noinline void __init kernel_init_freeable(void)
 	lockup_detector_init();
 
 	smp_init();
+	pr_info("after smp_init");
+	rkp_tzc_set_aciton(1);
 	sched_init_smp();
 
 	page_alloc_init_late();

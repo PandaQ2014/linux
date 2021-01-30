@@ -98,7 +98,7 @@ static inline pte_t *
 pte_alloc_one_kernel(struct mm_struct *mm)
 {
 	return (pte_t*)phys_to_virt(rkp_allocPageTable());
-	//return (pte_t *)__get_free_page(PGALLOC_GFP);
+	// return (pte_t *)__get_free_page(PGALLOC_GFP);
 }
 
 static inline pgtable_t
@@ -106,14 +106,14 @@ pte_alloc_one(struct mm_struct *mm)
 {
 	struct page *pte;
 
-	//pte = alloc_pages(PGALLOC_GFP, 0);
+	// pte = alloc_pages(PGALLOC_GFP, 0);
 	pte = phys_to_page(rkp_allocPageTable());
 	if (!pte)
 		return NULL;
 	if (!pgtable_page_ctor(pte)) {
 		pr_err("!pgtable_page_ctor");
 		rkp_releasePageTable(page_to_phys(pte));
-		//__free_page(pte);
+		// __free_page(pte);
 		return NULL;
 	}
 	return pte;
@@ -126,14 +126,14 @@ static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 {
 	if (ptep)
 		rkp_releasePageTable(virt_to_phys(ptep));
-		//free_page((unsigned long)ptep);
+		// free_page((unsigned long)ptep);
 }
 
 static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
 {
 	pgtable_page_dtor(pte);
 	rkp_releasePageTable(page_to_phys(pte));
-	//__free_page(pte);
+	// __free_page(pte);
 }
 
 static inline void __pmd_populate(pmd_t *pmdp, phys_addr_t ptep,

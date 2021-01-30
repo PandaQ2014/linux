@@ -3231,6 +3231,7 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 	struct vm_area_struct *vma = vmf->vma;
 	bool write = vmf->flags & FAULT_FLAG_WRITE;
 	pte_t entry;
+	pte_t new_entry;
 	vm_fault_t ret;
 
 	if (pmd_none(*vmf->pmd) && PageTransCompound(page) &&
@@ -3257,6 +3258,20 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 	entry = mk_pte(page, vma->vm_page_prot);
 	if (write)
 		entry = maybe_mkwrite(pte_mkdirty(entry), vma);
+	
+	unsigned long pa_mask = 0x0000000ffffff000;
+	unsigned long pa = pte_val(entry) & pa_mask;
+	// pr_info("alloc_set_pte | pa: 0x%016lx");
+	int pa_managed = rkp_pa_is_managed(pa);
+	if (pa_managed) {
+		pr_info("original pte: 0x%016lx", pte_val(entry));
+		dump_stack();
+
+		new_entry = set_pte_bit(entry, __pgprot(PTE_RDONLY));
+		new_entry = clear_pte_bit(entry, __pgprot(PTE_WRITE));
+		new_entry = clear_pte_bit(entry, __pgprot(PTE_DIRTY));
+	}
+
 	/* copy-on-write page */
 	if (write && !(vma->vm_flags & VM_SHARED)) {
 		inc_mm_counter_fast(vma->vm_mm, MM_ANONPAGES);
@@ -3267,7 +3282,8 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 		inc_mm_counter_fast(vma->vm_mm, mm_counter_file(page));
 		page_add_file_rmap(page, false);
 	}
-	set_pte_at(vma->vm_mm, vmf->address, vmf->pte, entry);
+	// set_pte_at(vma->vm_mm, vmf->address, vmf->pte, entry);
+	set_pte_at(vma->vm_mm, vmf->address, vmf->pte, new_entry);
 
 	/* no need to invalidate: a not-present page won't be cached */
 	update_mmu_cache(vma, vmf->address, vmf->pte);
@@ -3546,10 +3562,12 @@ static vm_fault_t do_fault(struct vm_fault *vmf)
 	struct mm_struct *vm_mm = vma->vm_mm;
 	vm_fault_t ret;
 
+	// pr_info("do_fault entered");
 	/*
 	 * The VMA was not fully populated on mmap() or missing VM_DONTEXPAND
 	 */
 	if (!vma->vm_ops->fault) {
+		// pr_info("1");  //没打出来
 		/*
 		 * If we find a migration pmd entry or a none pmd entry, which
 		 * should never happen, return SIGBUS
@@ -3575,12 +3593,18 @@ static vm_fault_t do_fault(struct vm_fault *vmf)
 
 			pte_unmap_unlock(vmf->pte, vmf->ptl);
 		}
-	} else if (!(vmf->flags & FAULT_FLAG_WRITE))
+	} else if (!(vmf->flags & FAULT_FLAG_WRITE)) {
+		// pr_info("2");  //el0_error_naked 打出来的
 		ret = do_read_fault(vmf);
-	else if (!(vma->vm_flags & VM_SHARED))
+	}
+	else if (!(vma->vm_flags & VM_SHARED)) {
+		// pr_info("3"); //__arch_clear_user 打出来的
 		ret = do_cow_fault(vmf);
-	else
+	}
+	else {
+		// pr_info("4"); //没打出来
 		ret = do_shared_fault(vmf);
+	}
 
 	/* preallocated pagetable is unused: free it */
 	if (vmf->prealloc_pte) {
@@ -3767,6 +3791,7 @@ static vm_fault_t handle_pte_fault(struct vm_fault *vmf)
 {
 	pte_t entry;
 
+	// pr_info("entered handle_pte_fault");
 	if (unlikely(pmd_none(*vmf->pmd))) {
 		/*
 		 * Leave __pte_alloc() until later: because vm_ops->fault may
@@ -3775,6 +3800,7 @@ static vm_fault_t handle_pte_fault(struct vm_fault *vmf)
 		 * concurrent faults and from rmap lookups.
 		 */
 		vmf->pte = NULL;
+		// pr_info("handle_pte_fault | vmf->pte = NULL");
 	} else {
 		/* See comment in pte_alloc_one_map() */
 		if (pmd_devmap_trans_unstable(vmf->pmd))
@@ -3787,6 +3813,7 @@ static vm_fault_t handle_pte_fault(struct vm_fault *vmf)
 		 */
 		vmf->pte = pte_offset_map(vmf->pmd, vmf->address);
 		vmf->orig_pte = *vmf->pte;
+		pr_info("handle_pte_fault | vmf->pte: 0x%016lx", pte_val(*(vmf->pte)));
 
 		/*
 		 * some architectures can have larger ptes than wordsize,
@@ -3967,8 +3994,10 @@ vm_fault_t handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 
 	if (unlikely(is_vm_hugetlb_page(vma)))
 		ret = hugetlb_fault(vma->vm_mm, vma, address, flags);
-	else
+	else {
+		// pr_info("before __handle_mm_fault");
 		ret = __handle_mm_fault(vma, address, flags);
+	}
 
 	if (flags & FAULT_FLAG_USER) {
 		mem_cgroup_exit_user_fault();

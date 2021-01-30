@@ -221,7 +221,33 @@ static inline pmd_t pmd_mkcont(pmd_t pmd)
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
 	//WRITE_ONCE(*ptep, pte);
+	// unsigned long pa_mask = 0x0000000ffffff000;
+	// unsigned long pa = pte_val(pte) & pa_mask;
+	// pr_info("set_pte 1 | pa in pte: 0x%016lx", pa);
+
+	// // unsigned long ori_pte = pte_val(*ptep);
+	// // unsigned long ori_pfn = pte_pfn(*ptep);
+	// // unsigned long new_pte = pte_val(pte);
+	// // unsigned long new_pfn = pte_pfn(pte);
+	// // pr_info("set_pte 2 | ori_pte: 0x%016lx, ori_pfn: 0x%016lx, new_pte: 0x%016lx, new_pfn: 0x%016lx", ori_pte, ori_pfn, new_pte, new_pfn);
+
+	// int pa_managed = rkp_pa_is_managed(pa);
+	// if (pa_managed) {
+	// 	// dump_stack();
+	// 	pgprot_t pgprot;
+	// 	pte_t pte_ro;
+
+	// 	pgprot_val(pgprot) = pte_val(pte);
+	// 	pteval_t pgprot_ro =  (pgprot_val(pgprot) & ~PTE_WRITE) | PTE_RDONLY;
+	// 	pte_val(pte_ro) = pgprot_ro;
+	// 	pr_info("set_pte detected pa: 0x%016lx is managed, pte: 0x%016lx, pte_ro: 0x%016lx", pa, pte_val(pte), pte_val(pte_ro));
+	// 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(pte_ro));
+	// } else {
+	// 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(pte));
+	// }
+
 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(ptep),PTVALUE2UL(pte));
+
 	/*
 	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
 	 * or update_mmu_cache() have the necessary barriers.
@@ -464,6 +490,25 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 #endif /* __PAGETABLE_PMD_FOLDED */
 
 	//WRITE_ONCE(*pmdp, pmd);
+
+	// unsigned long pa_mask = 0x0000000ffffff000;
+	// unsigned long pa = pmd_val(pmd) & pa_mask;
+	// int pa_managed = rkp_pa_is_managed(pa);
+	// // pr_info("set_pmd | pmdp: 0x%016lx, pmd: 0x%016lx, pa_managed: %d", pmdp, pmd_val(pmd), pa_managed);
+	// if (pa_managed) {
+	// 	// dump_stack();
+	// 	pgprot_t pgprot;
+	// 	pmd_t pmd_ro;
+
+	// 	pgprot_val(pgprot) = pmd_val(pmd);
+	// 	pmdval_t pgprot_ro =  (pgprot_val(pgprot) & ~PTE_WRITE) | PTE_RDONLY;
+	// 	pmd_val(pmd_ro) = pgprot_ro;
+	// 	pr_info("set_pmd detected pa: 0x%016lx is managed, pmd: 0x%016lx, pmd_ro: 0x%016lx", pa, pmd_val(pmd), pmd_val(pmd_ro));
+	// 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd_ro));
+	// } else {
+	// 	rkp_setPageTableElement(RKP_PTE,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd));
+	// }
+
 	rkp_setPageTableElement(RKP_PMD,PTPTR2ULPTR(pmdp),PTVALUE2UL(pmd));
 	if (pmd_valid(pmd))
 		dsb(ishst);

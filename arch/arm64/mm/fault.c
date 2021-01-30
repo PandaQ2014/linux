@@ -356,7 +356,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x8);
 						rkp_instruction_simulation(instruction, reg_x7, 0, ins_write_pa);
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0x78002507:
 						if(debug)pr_info("strh w7, [x8], #2 to be simulated");
@@ -366,7 +366,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
 						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 2;
 						if(debug)pr_info("x8 + 2 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xb8004507:
 						if(debug)pr_info("str w7, [x8], #4 to be simulated");
@@ -376,7 +376,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
 						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 4;
 						if(debug)pr_info("x8 + 4 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xf8008507:
 						if(debug)pr_info("str x7, [x8], #8 to be simulated");
@@ -386,7 +386,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x8);
 						*(unsigned long long *)(regs->user_regs.regs + 8) = reg_x8 + 8;
 						if(debug)pr_info("x8 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					
 					case 0xa9001d07:
@@ -395,7 +395,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x8, *(u_int64_t *)(reg_x8 + 8));
 						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x8, *(u_int64_t *)(reg_x8 + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa9011d07:
 						if(debug)pr_info("stp x7, x7, [x8, #0x10] to be simulated");
@@ -404,7 +404,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
 						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa9021d07:
 						if(debug)pr_info("stp x7, x7, [x8, #0x20] to be simulated");
@@ -413,7 +413,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
 						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa9031d07:
 						if(debug)pr_info("stp x7, x7, [x8, #0x30] to be simulated");
@@ -422,7 +422,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
 						rkp_instruction_simulation(instruction, reg_x7, reg_x7, ins_write_pa);
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xd50b7428:
 						if(debug)pr_info("dc zva, x8 to be simulated");
@@ -436,7 +436,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_before: |0x%016lx | 0x%016lx | 0x%016lx | 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8), *(u_int64_t *)(ins_write_va + 1008), *(u_int64_t *)(ins_write_va + 1016));
 						rkp_instruction_simulation(instruction, 0, 0, ins_write_pa);
 						if(debug)pr_info("content_after: |0x%016lx | 0x%016lx | 0x%016lx | 0x%016lx", *(u_int64_t *)ins_write_va, *(u_int64_t *)(ins_write_va + 8), *(u_int64_t *)(ins_write_va + 1008), *(u_int64_t *)(ins_write_va + 1016));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 
 					// instruction in __arch_copy_from_user()
@@ -448,7 +448,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 8;
 						if(debug)pr_info("x6 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xb80044c3:
 						if(debug)pr_info("str w3, [x6], #4 to be simulated");
@@ -458,7 +458,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 4;
 						if(debug)pr_info("x6 + 4 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0x780024c3:
 						if(debug)pr_info("strh w3, [x6], #2 to be simulated");
@@ -468,7 +468,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 2;
 						if(debug)pr_info("x6 + 2 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0x380014c3:
 						if(debug)pr_info("strb w3, [x6], #1 to be simulated");
@@ -478,7 +478,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x6);
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 1;
 						if(debug)pr_info("x6 + 1 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 
 					case 0xa88120c7:
@@ -489,7 +489,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
 						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa88128c9:
 						if(debug)pr_info("stp x9, x10, [x6], #0x10 to be simulated");
@@ -499,7 +499,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
 						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa88130cb:
 						if(debug)pr_info("stp x11, x12, [x6], #0x10 to be simulated");
@@ -509,7 +509,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
 						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					case 0xa88138cd:
 						if(debug)pr_info("stp x13, x14, [x6], #0x10 to be simulated");
@@ -519,7 +519,7 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 						if(debug)pr_info("content_after: 0x%016lx, 0x%016lx", *(u_int64_t *)reg_x6, *(u_int64_t *)(reg_x6 + 8));
 						*(unsigned long long *)(regs->user_regs.regs + 6) = reg_x6 + 0x10;
 						if(debug)pr_info("x6 + 0x10 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 6));
-						flush_tlb_all();
+						if(debug)flush_tlb_all();
 						break;
 					
 					default:
@@ -650,6 +650,7 @@ good_area:
 		goto out;
 	}
 
+	// pr_info("__do_page_fault | before handle_mm_fault");
 	return handle_mm_fault(vma, addr & PAGE_MASK, mm_flags);
 
 check_stack:
@@ -695,6 +696,7 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 	} else if ((esr & ESR_ELx_WNR) && !(esr & ESR_ELx_CM)) {
 		vm_flags = VM_WRITE;
 		mm_flags |= FAULT_FLAG_WRITE;
+		// pr_info("do_page_fault | vm_flags: 0x%016lx, mm_flags: 0x%08x", vm_flags, mm_flags);
 	}
 
 	if (is_ttbr0_addr(addr) && is_el1_permission_fault(addr, esr, regs)) {
@@ -736,6 +738,7 @@ retry:
 #endif
 	}
 
+	// pr_info("do_page_fault | before __do_page_fault");
 	fault = __do_page_fault(mm, addr, mm_flags, vm_flags, tsk);
 	major |= fault & VM_FAULT_MAJOR;
 
@@ -845,6 +848,11 @@ static int __kprobes do_translation_fault(unsigned long addr,
 					  unsigned int esr,
 					  struct pt_regs *regs)
 {
+	u_int32_t instruction = *(unsigned int *)(regs->user_regs.pc);
+	// pr_info("do_translation_fault | addr: 0x%016lx, pc: %pS, instr: 0x%08lx", addr, (void *)regs->user_regs.pc, instruction);  //最后是el0_error_naked
+	pr_info("do_translation_fault | addr: 0x%016lx, instr: 0x%08lx", addr, instruction);
+	// show_regs(regs);  //最后是el0_error_naked
+
 	if (is_ttbr0_addr(addr))
 		return do_page_fault(addr, esr, regs);
 
