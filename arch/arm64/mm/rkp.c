@@ -17,6 +17,7 @@ static int INITED = 0;
 static DEFINE_SPINLOCK(xchg_spin_lock);
 static DEFINE_SPINLOCK(ptmanager_spin_lock);
 static DEFINE_SPINLOCK(cfu_patch_spin_lock);
+static DEFINE_SPINLOCK(instr_simulation);
 phys_addr_t POOLSTART = 0; //初始值保证rkp_paIsManaged宏在RKP未初始化前始终返回false
 phys_addr_t POOLEND = 0;
 
@@ -102,7 +103,9 @@ void rkp_instruction_simulation(unsigned long instruction,unsigned long param1,
                                 unsigned long param2,unsigned long param3){
     struct arm_smccc_res res;
     // memset(&res, 0, sizeof(res));
+    spin_lock(&instr_simulation);
     arm_smccc_smc(TEESMC_OPTEED_RKP_INSTR_SIMULATION, instruction, param1, param2, param3, 0, 0, 0, &res);
+    spin_unlock(&instr_simulation);
     // if(res.a0 != 0){
     //     pr_err("TEESMC_OPTEED_RKP_INSTR_SIMULATION failed");
     //     return;
@@ -184,9 +187,71 @@ void rkp_tzc_set_aciton(int action) {
     arm_smccc_smc(TEESMC_OPTEED_RKP_TZC_SET_ACTION, action, 0, 0, 0, 0, 0, 0, &res);
 }
 
+phys_addr_t pgtable_virt_to_phys(void* va_p) {
+    unsigned long va = (unsigned long)va_p;
+    struct mm_struct *mm;
+	pgd_t *pgd;
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+
+    //   user va: 0x0000 ~~~
+	// kernel va: 0xffff ~~~
+	if (va >> 48) {
+		mm = &init_mm;
+	} else {
+		mm = current->mm;
+	}
+
+	pgd = pgd_offset(mm, va);
+	if (pgd_none(*pgd)) {
+		goto error;
+	}
+
+	p4d = p4d_offset(pgd, va);
+	if (p4d_none(*p4d)) {
+		goto error;
+	}
+
+	pud = pud_offset(p4d, va);
+	if (pud_none(*pud)) {
+		goto error;
+	}
+
+	pmd = pmd_offset(pud, va);
+	if (pmd_none(*pmd)) {
+		goto error;
+	}
+
+	pte = pte_offset_kernel(pmd, va);
+	if (pte_none(*pte)) {
+		goto error;
+	}
+
+    if (!pte_present(*pte)) {
+		pr_err("pte is not in RAM.\n");
+		goto error;
+	}
+
+    phys_addr_t pa = (phys_addr_t)(((pte_val(*pte) & PAGE_MASK) | (va & ~PAGE_MASK)) &
+			    0x0000ffffffffffff);
+
+    // pr_info("pgtable_virt_to_phys | va: 0x%016lx -> pa: 0x%016lx", va, pa);
+
+    // return (phys_addr_t)(((pte_val(*pte) & PAGE_MASK) | (va & ~PAGE_MASK)) &
+	// 		    0x0000ffffffffffff); // 0x0000ffff ffffffff
+    return pa;
+
+error:
+	// pr_err("error va: 0x%016lx\n", va);
+	return -1;
+}
+
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
 EXPORT_SYMBOL(rkp_mem_set);
 EXPORT_SYMBOL(rkp_copy_from_user_patch_on);
 EXPORT_SYMBOL(rkp_copy_from_user_patch_off);
 EXPORT_SYMBOL(rkp_tzc_set_aciton);
+EXPORT_SYMBOL(pgtable_virt_to_phys);

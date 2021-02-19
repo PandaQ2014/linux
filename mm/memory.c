@@ -2490,6 +2490,7 @@ static vm_fault_t wp_page_shared(struct vm_fault *vmf)
 static vm_fault_t do_wp_page(struct vm_fault *vmf)
 	__releases(vmf->ptl)
 {
+	// pr_info("do_wp_page entered!");
 	struct vm_area_struct *vma = vmf->vma;
 
 	vmf->page = vm_normal_page(vma, vmf->address, vmf->orig_pte);
@@ -3267,9 +3268,18 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 		pr_info("original pte: 0x%016lx", pte_val(entry));
 		dump_stack();
 
-		new_entry = set_pte_bit(entry, __pgprot(PTE_RDONLY));
-		new_entry = clear_pte_bit(entry, __pgprot(PTE_WRITE));
-		new_entry = clear_pte_bit(entry, __pgprot(PTE_DIRTY));
+		// 这么写报BUG： Bad page map 且无限循环
+		// new_entry = entry;
+		// pr_info("new_entry: 0x%016lx", pte_val(new_entry));
+		// new_entry = set_pte_bit(new_entry, __pgprot(PTE_RDONLY));
+		// new_entry = clear_pte_bit(new_entry, __pgprot(PTE_WRITE));
+		// new_entry = clear_pte_bit(new_entry, __pgprot(PTE_DIRTY));
+		// pr_info("modified pte: 0x%016lx", pte_val(new_entry));
+
+		entry = set_pte_bit(entry, __pgprot(PTE_RDONLY));
+		entry = clear_pte_bit(entry, __pgprot(PTE_WRITE));
+		entry = clear_pte_bit(entry, __pgprot(PTE_DIRTY));
+		pr_info("modified pte: 0x%016lx", pte_val(entry));
 	}
 
 	/* copy-on-write page */
@@ -3282,8 +3292,8 @@ vm_fault_t alloc_set_pte(struct vm_fault *vmf, struct mem_cgroup *memcg,
 		inc_mm_counter_fast(vma->vm_mm, mm_counter_file(page));
 		page_add_file_rmap(page, false);
 	}
-	// set_pte_at(vma->vm_mm, vmf->address, vmf->pte, entry);
-	set_pte_at(vma->vm_mm, vmf->address, vmf->pte, new_entry);
+	set_pte_at(vma->vm_mm, vmf->address, vmf->pte, entry);
+	// set_pte_at(vma->vm_mm, vmf->address, vmf->pte, new_entry);
 
 	/* no need to invalidate: a not-present page won't be cached */
 	update_mmu_cache(vma, vmf->address, vmf->pte);
@@ -3813,7 +3823,7 @@ static vm_fault_t handle_pte_fault(struct vm_fault *vmf)
 		 */
 		vmf->pte = pte_offset_map(vmf->pmd, vmf->address);
 		vmf->orig_pte = *vmf->pte;
-		pr_info("handle_pte_fault | vmf->pte: 0x%016lx", pte_val(*(vmf->pte)));
+		// pr_info("handle_pte_fault | vmf->pte: 0x%016lx", pte_val(*(vmf->pte)));
 
 		/*
 		 * some architectures can have larger ptes than wordsize,

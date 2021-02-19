@@ -697,6 +697,55 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 		vm_flags = VM_WRITE;
 		mm_flags |= FAULT_FLAG_WRITE;
 		// pr_info("do_page_fault | vm_flags: 0x%016lx, mm_flags: 0x%08x", vm_flags, mm_flags);
+		phys_addr_t pa = pgtable_virt_to_phys((void *)addr);
+		if (rkp_pa_is_managed(pa)) {
+			pr_info("addr: 0x%016lx, pa: 0x%016lx is managed", addr, pa);
+
+			u_int32_t instr = *(unsigned int *)(regs->user_regs.pc);
+			u_int64_t reg_x0 = *(unsigned long long *)(regs->user_regs.regs + 0);
+			phys_addr_t ins_write_pa;
+			u_int64_t ins_write_va;
+
+			switch (instr) {
+				// instruction in __arch_clear_user()
+				case 0xf800841f:
+					// pr_info("str xzr, [x0], #8 to be simulated");
+					// pr_info("reg_x0: 0x%016lx", reg_x0);
+					ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+					// u_int64_t xzr = 0;
+					// __asm__ __volatile__("mrs %0, xzr":"=r"(xzr));
+					// pr_info("xzr: 0x%016lx", xzr);
+					// pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x0);
+					rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+					// pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x0);
+					*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 8;
+					// pr_info("x0 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 0));
+					break;
+				
+				case 0x7800241f:
+					// pr_info("strh wzr, [x0], #2 to be simulated");
+					ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+					rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+					*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 2;
+					break;
+
+				case 0x3800041f:
+					pr_info("strb wzr, [x0], #0 to be simulated");
+					ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+					rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+					// pr_info("returned");
+					*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 0;
+					break;
+
+				default:
+					pr_info("unsolved instruction: 0x%08x", instr);
+					panic("unsolved instruction");
+					break;
+			}
+
+			regs->user_regs.pc += 4;
+			return 0;
+		}
 	}
 
 	if (is_ttbr0_addr(addr) && is_el1_permission_fault(addr, esr, regs)) {
@@ -739,6 +788,97 @@ retry:
 	}
 
 	// pr_info("do_page_fault | before __do_page_fault");
+	// 指令模拟放这里，运行多次后所有CPU核会卡住不动
+	// phys_addr_t pa;
+	// pa = pgtable_virt_to_phys((void *)addr);
+	// if (rkp_pa_is_managed(pa)) {
+	// 	// pr_info("addr: 0x%016lx, pa: 0x%016lx, pa is managed", addr, pa);
+	// 	// dump_stack();
+	// 	if (vm_flags & VM_WRITE && mm_flags & FAULT_FLAG_WRITE) {
+	// 		// pr_info("pte already read-only");
+
+	// 		u_int32_t instr = *(unsigned int *)(regs->user_regs.pc);
+	// 		u_int64_t reg_x0 = *(unsigned long long *)(regs->user_regs.regs + 0);
+	// 		phys_addr_t ins_write_pa;
+	// 		u_int64_t ins_write_va;
+
+	// 		switch (instr) {
+	// 			// instruction in __arch_clear_user()
+	// 			case 0xf800841f:
+	// 				// pr_info("str xzr, [x0], #8 to be simulated");
+	// 				// pr_info("reg_x0: 0x%016lx", reg_x0);
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				// u_int64_t xzr = 0;
+	// 				// __asm__ __volatile__("mrs %0, xzr":"=r"(xzr));
+	// 				// pr_info("xzr: 0x%016lx", xzr);
+	// 				// pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				// pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x0);
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 8;
+	// 				// pr_info("x0 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 0));
+	// 				break;
+				
+	// 			case 0x7800241f:
+	// 				// pr_info("strh wzr, [x0], #2 to be simulated");
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 2;
+	// 				break;// 		switch (instr) {
+	// 			// instruction in __arch_clear_user()
+	// 			case 0xf800841f:
+	// 				// pr_info("str xzr, [x0], #8 to be simulated");
+	// 				// pr_info("reg_x0: 0x%016lx", reg_x0);
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				// u_int64_t xzr = 0;
+	// 				// __asm__ __volatile__("mrs %0, xzr":"=r"(xzr));
+	// 				// pr_info("xzr: 0x%016lx", xzr);
+	// 				// pr_info("content_before: 0x%016lx", *(u_int64_t *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				// pr_info("content_after: 0x%016lx", *(u_int64_t *)reg_x0);
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 8;
+	// 				// pr_info("x0 + 8 = 0x%016llx", *(unsigned long long *)(regs->user_regs.regs + 0));
+	// 				break;
+				
+	// 			case 0x7800241f:
+	// 				// pr_info("strh wzr, [x0], #2 to be simulated");
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 2;
+	// 				break;
+
+	// 			case 0x3800041f:
+	// 				pr_info("strb wzr, [x0], #0 to be simulated");
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				pr_info("returned");
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 0;
+	// 				break;
+
+	// 			default:
+	// 				pr_info("unsolved instruction: 0x%08x", instr);
+	// 				panic("unsolved instruction");
+	// 				break;
+	// 		}
+
+	// 			case 0x3800041f:
+	// 				pr_info("strb wzr, [x0], #0 to be simulated");
+	// 				ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
+	// 				rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
+	// 				pr_info("returned");
+	// 				*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 0;
+	// 				break;
+
+	// 			default:
+	// 				pr_info("unsolved instruction: 0x%08x", instr);
+	// 				panic("unsolved instruction");
+	// 				break;
+	// 		}
+
+	// 		regs->user_regs.pc += 4;
+	// 		return 0;
+	// 	}
+	// }
+
 	fault = __do_page_fault(mm, addr, mm_flags, vm_flags, tsk);
 	major |= fault & VM_FAULT_MAJOR;
 
@@ -850,7 +990,7 @@ static int __kprobes do_translation_fault(unsigned long addr,
 {
 	u_int32_t instruction = *(unsigned int *)(regs->user_regs.pc);
 	// pr_info("do_translation_fault | addr: 0x%016lx, pc: %pS, instr: 0x%08lx", addr, (void *)regs->user_regs.pc, instruction);  //最后是el0_error_naked
-	pr_info("do_translation_fault | addr: 0x%016lx, instr: 0x%08lx", addr, instruction);
+	// pr_info("do_translation_fault | addr: 0x%016lx, instr: 0x%08lx", addr, instruction);
 	// show_regs(regs);  //最后是el0_error_naked
 
 	if (is_ttbr0_addr(addr))
@@ -966,8 +1106,12 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 {
 	const struct fault_info *inf = esr_to_fault_info(esr);
 
+	// pr_info("inf->fn: %pS", inf->fn);
+
 	if (!inf->fn(addr, esr, regs))
 		return;
+
+	// pr_info("after inf->fn");
 
 	if (!user_mode(regs)) {
 		pr_alert("Unhandled fault at 0x%016lx\n", addr);

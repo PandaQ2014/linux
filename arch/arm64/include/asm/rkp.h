@@ -95,4 +95,6 @@ void rkp_copy_from_user_patch_off(void);
 
 void rkp_tzc_set_aciton(int action);
 
+phys_addr_t pgtable_virt_to_phys(void* va_p);
+
 #endif
