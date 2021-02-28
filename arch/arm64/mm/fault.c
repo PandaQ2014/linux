@@ -703,6 +703,18 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 
 			u_int32_t instr = *(unsigned int *)(regs->user_regs.pc);
 			u_int64_t reg_x0 = *(unsigned long long *)(regs->user_regs.regs + 0);
+			u_int64_t reg_x1 = *(unsigned long long *)(regs->user_regs.regs + 1);
+			u_int64_t reg_x2 = *(unsigned long long *)(regs->user_regs.regs + 2);
+			u_int64_t reg_x3 = *(unsigned long long *)(regs->user_regs.regs + 3);
+			u_int64_t reg_x5 = *(unsigned long long *)(regs->user_regs.regs + 5);
+			u_int64_t reg_x6 = *(unsigned long long *)(regs->user_regs.regs + 6);
+			u_int64_t reg_x7 = *(unsigned long long *)(regs->user_regs.regs + 7);
+			u_int64_t reg_x8 = *(unsigned long long *)(regs->user_regs.regs + 8);
+			u_int64_t reg_x14 = *(unsigned long long *)(regs->user_regs.regs + 14);
+			u_int64_t reg_x19 = *(unsigned long long *)(regs->user_regs.regs + 19);
+			u_int64_t reg_x20 = *(unsigned long long *)(regs->user_regs.regs + 20);
+			u_int64_t reg_x24 = *(unsigned long long *)(regs->user_regs.regs + 24);
+			u_int64_t reg_x28 = *(unsigned long long *)(regs->user_regs.regs + 28);
 			phys_addr_t ins_write_pa;
 			u_int64_t ins_write_va;
 
@@ -730,12 +742,187 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 					break;
 
 				case 0x3800041f:
-					pr_info("strb wzr, [x0], #0 to be simulated");
+					// pr_info("strb wzr, [x0], #0 to be simulated");
 					ins_write_pa = pgtable_virt_to_phys((void *)reg_x0);
 					rkp_instruction_simulation(instr, 0, 0, ins_write_pa);
 					// pr_info("returned");
 					*(unsigned long long *)(regs->user_regs.regs + 0) = reg_x0 + 0;
 					break;
+
+				// instruction in el0_da()
+				case 0xf90024a3:
+					pr_info("str x3, [x5, #0x48] to be simulated");
+					ins_write_va = reg_x5 + 0x48;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x3);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x3, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0xf900b840:
+					pr_info("str x0, [x2, #0x170] to be simulated");
+					ins_write_va = reg_x2 + 0x170;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x0);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x0, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xf900a420:
+					pr_info("str x0, [x1, #0x148] to be simulated");
+					ins_write_va = reg_x1 + 0x148;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					//ffff8 pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x0);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x0, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0xf907f4a6:
+					pr_info("str x6, [x5, #0xfe8] to be simulated");
+					ins_write_va = reg_x5 + 0xfe8;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x6);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x6, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xf9009261:
+					pr_info("str x1, [x19, #0x120] to be simulated");
+					ins_write_va = reg_x19 + 0x120;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x1);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x1, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xf9000462:
+					pr_info("str x2, [x3, #8] to be simulated");
+					ins_write_va = reg_x3 + 0x8;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x2);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x2, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xa9008a74:
+					pr_info("stp x20, x2, [x19, #0x8] to be simulated");
+					ins_write_va = reg_x19 + 0x8;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx 0x%016lx", ins_write_va, ins_write_pa, reg_x20, reg_x2);
+					// pr_info("content before: 0x%016lx 0x%016lx",  *(unsigned long *)ins_write_va,  *(unsigned long *)(ins_write_va + 8));
+					rkp_instruction_simulation(instr, reg_x20, reg_x2, ins_write_pa);
+					// pr_info("content after: 0x%016lx 0x%016lx",  *(unsigned long *)ins_write_va,  *(unsigned long *)(ins_write_va + 8));
+					break;
+
+				case 0xf9001673:
+					pr_info("str x19, [x19, #0x28] to be simulated");
+					ins_write_va = reg_x19 + 0x28;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x19);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x19, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xf9001e7c:
+					pr_info("str x28, [x19, #0x38] to be simulated");
+					ins_write_va = reg_x19 + 0x38;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x28);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x28, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0xf9016a78:
+					pr_info("str x24, [x19, #0x2d0] to be simulated");
+					ins_write_va = reg_x19 + 0x2d0;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x24);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x24, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0x39000006:
+					pr_info("strb w6, [x0] to be simulated");
+					ins_write_va = reg_x0;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x6);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x6, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0x382e6808:
+					pr_info("strb w8, [x0, x14] to be simulated");
+					ins_write_va = reg_x0 + reg_x14;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x8);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x8, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0x381ff0a7:
+					pr_info("sturb w7, [x5, #-1] to be simulated");
+					ins_write_va = reg_x5 - 1;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x7);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x7, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0xf9000700:
+					pr_info("str x0, [x24, #8] to be simulated");
+					ins_write_va = reg_x24 + 0x8;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x0);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x0, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0xb9001b02:
+					pr_info("str w2, [x24, #0x18] to be simulated");
+					ins_write_va = reg_x24 + 0x18;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x2);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x2, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+				
+				case 0xf9000660:
+					pr_info("str x0, [x19, #0x8] to be simulated");
+					ins_write_va = reg_x19 + 0x8;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					// pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x2);
+					// pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x2, 0, ins_write_pa);
+					// pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				case 0x390c7261:
+					pr_info("strb w1, [x19, #0x31c] to be simulated");
+					ins_write_va = reg_x19 + 0x31c;
+					ins_write_pa = pgtable_virt_to_phys((void *)ins_write_va);
+					pr_info("va: 0x%016lx, pa: 0x%016lx, content: 0x%016lx", ins_write_va, ins_write_pa, reg_x1);
+					pr_info("content before: 0x%016lx", *(unsigned long *)ins_write_va);
+					rkp_instruction_simulation(instr, reg_x1, 0, ins_write_pa);
+					pr_info("content after: 0x%016lx", *(unsigned long *)ins_write_va);
+					break;
+
+				// case 0x3d800000:
+				// 	pr_info("str q0, [x0] to be simulated");
+				// 	break;
 
 				default:
 					pr_info("unsolved instruction: 0x%08x", instr);
