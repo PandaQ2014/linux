@@ -33,6 +33,7 @@
 #include <linux/perf_event.h>
 #include <linux/preempt.h>
 #include <linux/hugetlb.h>
+#include <linux/arm-smccc.h>
 
 #include <asm/acpi.h>
 #include <asm/bug.h>
@@ -524,8 +525,8 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 					
 					default:
 						pr_info("unsolved instruction: 0x%08x", instruction);
-						panic("test");
-						dump_stack();
+						// panic("test");
+						// dump_stack();
 						break;
 				}
 
@@ -664,6 +665,50 @@ static bool is_el0_instruction_abort(unsigned int esr)
 	return ESR_ELx_EC(esr) == ESR_ELx_EC_IABT_LOW;
 }
 
+void Set_PXN(struct mm_struct *mm, unsigned long addr)
+{
+	pgd_t *pgd = pgd_offset(mm, addr);
+	if(pgd_none(*pgd)||pgd_bad(*pgd))
+	{
+		pr_err("not mapped in pgd");
+		goto FAIL;
+	}
+	p4d_t *p4d = p4d_offset(pgd, addr);
+	if(p4d_none(*p4d)||p4d_bad(*p4d))
+	{
+		pr_err("not mapped in p4d");
+		goto FAIL;
+	}
+	pud_t *pud = pud_offset(p4d, addr);
+	if(pud_none(*pud)||pud_bad(*pud))
+	{
+		pr_err("not mapped in pud");
+		goto FAIL;
+	}
+	pmd_t *pmd = pmd_offset(pud, addr);
+	if(pmd_none(*pmd)||pmd_bad(*pmd))
+	{
+		pr_err("not mapped in pmd");
+		goto FAIL;
+	}
+	pte_t *pte = pte_offset_map(pmd, addr);
+	if(pte_none(*pte))
+	{
+		pr_err("not mapped in pte");
+		goto FAIL;
+	}
+	// pr_info("pte:0x%016llx, pte_va:0x%016llx",*pte, pte);
+	phys_addr_t pte_pa = __virt_to_phys_nodebug(pte);
+	pr_info("pte:0x%016llx, pte_va:0x%016llx, pte_pa:0x%016llx",*pte, pte, pte_pa);
+	// pr_info("czlxiede:0x%016lx",(unsigned long)pa);
+	struct arm_smccc_res res;
+	uint32_t smcid = TEESMC_OPTEED_RV(42);
+	arm_smccc_smc(smcid, (unsigned long)pte_pa, 0, 0, 0, 0, 0, 0, &res);
+
+FAIL:
+	return;
+}
+
 static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 				   struct pt_regs *regs)
 {
@@ -737,6 +782,38 @@ retry:
 	}
 
 	fault = __do_page_fault(mm, addr, mm_flags, vm_flags, tsk);
+	Set_PXN(mm, addr);
+	// struct arm_smccc_res res;
+	// pr_info("pgd");
+	// pgd_t *pgd = pgd_offset(mm, addr);
+	// pr_info("p4d");
+	// p4d_t *p4d = p4d_offset(pgd, addr);
+	// pr_info("pud");
+	// pud_t *pud = pud_offset(p4d, addr);
+	// pr_info("pmd");
+	// pmd_t *pmd = pmd_offset(pud, addr);
+	// pr_info("pte");
+	// pte_t *pte = pte_offset_map(pmd, addr);
+	// pr_info("pte_user:0x%16llx", *pte);
+	// unsigned long c = *(unsigned long long*)pte & PTE_PXN;
+	// if(c == 0x0)
+	// {
+	// 	pr_info("pxn_not_set");
+	// 	dump_stack();
+	// }
+	// phys_addr_t pte_pa = __pa_symbol(pte);
+	// unsigned long long a = (unsigned long long )pte & 0xffffffff00000000;
+	// if(a != 0xffffffff00000000)
+	// {
+	// 	pr_info("youzhegedongxiaaaaaaaaaa");
+	// 	pr_info("pte_va:0x%016llx", pte);
+	// 	pr_info("pte:0x%016llx", *pte);
+	// 	// pr_info("pte:0x%016llx, pte_va:0x%016llx",*pte, pte);
+	// }
+	// phys_addr_t pte_pa = __virt_to_phys_nodebug(pte);
+	// unsigned long *pa = (unsigned long) (pte_val(*pte)&PAGE_MASK)|(addr&~PAGE_MASK);
+	// pr_info("pte:0x%016llx, pte_va:0x%016llx, pte_pa:0x%016llx",*pte, pte, pte_pa);
+
 	major |= fault & VM_FAULT_MAJOR;
 
 	if (fault & VM_FAULT_RETRY) {
