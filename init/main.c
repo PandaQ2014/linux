@@ -102,11 +102,50 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
 
+
+#include <linux/init.h> 
+#include <linux/printk.h>
+#include <linux/delay.h>
+#include <linux/kthread.h>
+#include <linux/export.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/kexec.h>
+#include <linux/libfdt.h>
+#include <linux/mman.h>
+#include <linux/nodemask.h>
+#include <linux/memblock.h>
+#include <linux/fs.h>
+#include <linux/mm.h>
+
+#include <asm/barrier.h>
+#include <asm/cputype.h>
+#include <asm/fixmap.h>
+#include <asm/kasan.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/sections.h>
+#include <asm/setup.h>
+#include <asm/sizes.h>
+#include <asm/tlb.h>
+#include <asm/mmu_context.h>
+#include <asm/ptdump.h>
+#include <asm/tlbflush.h>
+#include <asm/rkp.h>
+
+#include <asm/page.h>
+#include <linux/fcntl.h>
+#include <linux/unistd.h>
+#include <linux/uaccess.h>
+#include <linux/module.h>
+#include <linux/arm-smccc.h>
+#include "../security/selinux/include/security.h"
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
 extern void radix_tree_init(void);
 
+
+void pkm_kernel_thread(void);
 /*
  * Debug helper: via this flag we know that we are in 'early bootup code'
  * where only the boot processor is running with IRQ disabled.  This means
@@ -737,6 +776,18 @@ asmlinkage __visible void __init start_kernel(void)
 	taskstats_init_early();
 	delayacct_init();
 
+
+    struct arm_smccc_res res;
+	uint32_t smcid = TEESMC_OPTEED_RV(52);
+	selinux_state.enforcing = 1;
+	//pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
+	//pr_info("selinux_state.enforcing:%d,addr:%016llx\n",selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
+	phys_addr_t pa_enabled = __pa_symbol(&selinux_enabled);
+	phys_addr_t pa_enforcing = __pa_symbol(&selinux_state.enforcing);
+	//pr_info("pa_enabled:%016llx",pa_enabled);
+	//pr_info("pa_enforcing:%016llx",pa_enforcing);
+	arm_smccc_smc(smcid, pa_enabled, pa_enforcing, 0, 0, 0, 0, 0, &res);
+
 	check_bugs();
 
 	acpi_subsystem_init();
@@ -927,6 +978,7 @@ extern initcall_entry_t __initcall4_start[];
 extern initcall_entry_t __initcall5_start[];
 extern initcall_entry_t __initcall6_start[];
 extern initcall_entry_t __initcall7_start[];
+extern initcall_entry_t __initcall8_start[];
 extern initcall_entry_t __initcall_end[];
 
 static initcall_entry_t *initcall_levels[] __initdata = {
@@ -938,6 +990,7 @@ static initcall_entry_t *initcall_levels[] __initdata = {
 	__initcall5_start,
 	__initcall6_start,
 	__initcall7_start,
+    __initcall8_start,
 	__initcall_end,
 };
 
@@ -951,6 +1004,7 @@ static const char *initcall_level_names[] __initdata = {
 	"fs",
 	"device",
 	"late",
+    "pkm",
 };
 
 static void __init do_initcall_level(int level)
@@ -1186,3 +1240,149 @@ static noinline void __init kernel_init_freeable(void)
 
 	integrity_load_keys();
 }
+
+
+#include <linux/arm-smccc.h>
+#define SMC_TYPE_FAST           1ULL
+#define FUNCID_TYPE_SHIFT       31U
+#define FUNCID_CC_SHIFT         30U
+#define SMC_32              0U
+#define FUNCID_OEN_SHIFT        24U
+#define FUNCID_NUM_MASK         0xffffU
+#define TEESMC_OPTEED_RV(func_num) \
+        ((SMC_TYPE_FAST << FUNCID_TYPE_SHIFT) | \ 
+         ((SMC_32) << FUNCID_CC_SHIFT) | \
+         (62 << FUNCID_OEN_SHIFT) | \
+         ((func_num) & FUNCID_NUM_MASK))
+#include<linux/init.h> 
+#include <linux/printk.h>
+#include <linux/delay.h>
+#include <linux/kthread.h>
+
+int pkm_kernel_thread_func(void *data){
+    ssleep(2);
+    struct arm_smccc_res res_50,res_51,res_52;//存储smc指令返回内容
+    uint32_t smcid=TEESMC_OPTEED_RV(50);//设置smc指令id
+    uint32_t smcid_51 = TEESMC_OPTEED_RV(51); 
+    uint32_t smcid_52 = TEESMC_OPTEED_RV(52); 
+    memset(&res_51, 0, sizeof(res_51));
+    memset(&res_50, 0, sizeof(res_50));
+    memset(&res_52, 0, sizeof(res_52));
+
+    unsigned long monitor_B_time,monitor_B_time_now;
+    
+    struct task_struct *monitor_B=list_entry(current->sibling.next,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
+    while(1){
+        arm_smccc_smc(smcid_51,0,0,0,0,0,0,0,&res_51);//smc指令，51号smc指令是在sw中执行只读代码保护
+        if(res_51.a0==0)//如果返回的a0值为0，说明检测到了错误，触发panic
+            panic("error");
+        arm_smccc_smc(smcid_52,0,0,0,0,0,0,0,&res_52);//smc指令，51号smc指令是在sw中执行selinux保护		
+        if(res_52.a0==0)
+            panic("error");
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(monitor_B))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
+        {
+            panic("error");
+        }
+        else{
+            if(monitor_B->state==2)//判断所监控线程的task_struct结构体状态
+                monitor_B_time=get_seconds();//获取现在的时间
+            else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32||monitor_B->state==128){
+                panic("error");
+            }
+            else
+                ;
+            while(monitor_B->state==2){
+                monitor_B_time_now=get_seconds();
+                if (monitor_B_time_now-monitor_B_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
+                    panic("error");
+                    break; 
+                }
+                else
+                    mdelay(100);
+            }
+        }            
+    }
+    return 0;
+}
+
+
+int pkm_kernel_thread_monitor1(void *data){
+    ssleep(2);
+    unsigned long monitor_C_time,monitor_C_time_now;    
+    struct task_struct *monitor_C=list_entry(current->sibling.next,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
+    while(1){
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(monitor_C))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
+            {
+            panic("error");
+            }
+        else{
+            if(monitor_C->state==2)//判断所监控线程的task_struct结构体状态
+                monitor_C_time=get_seconds();
+            else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32||monitor_C->state==128){
+                panic("error");
+            }
+            else
+                ;
+            while(monitor_C->state==2){
+                monitor_C_time_now=get_seconds();
+                if (monitor_C_time_now-monitor_C_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
+                    panic("error");
+                    break; 
+                }
+                else
+                    mdelay(100);
+            }
+        }
+    }
+    return 0;
+}
+
+
+int pkm_kernel_thread_monitor2(void *data){
+    ssleep(2);
+
+    unsigned long monitor_A_time,monitor_A_time_now;
+
+    struct task_struct *master_A=list_entry(current->sibling.prev->prev,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
+    while(1){
+        mdelay(1000);
+        ssleep(1);
+        if (IS_ERR(master_A))//如果错误，则所监控的task_struct结构体已经不存在，那么说明该线程已经不存在了
+        {
+            panic("error");
+        }
+        else{
+            if(master_A->state==2)//判断所监控线程的task_struct结构体状态
+                monitor_A_time=get_seconds();
+            else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32 ||master_A->state==128)                     
+            {
+                panic("error");
+            }
+            else
+                ;
+            while(master_A->state==2){
+                monitor_A_time_now=get_seconds();
+                if (monitor_A_time_now-monitor_A_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
+                    panic("error");
+                    break;
+                } 
+                else
+                    mdelay(100);
+            }
+        }   
+    }
+    return 0;
+}
+
+
+
+void pkm_kernel_thread(){
+    struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");//创建内核线程
+    struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
+    struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
+}
+pkm_initcall(pkm_kernel_thread);
