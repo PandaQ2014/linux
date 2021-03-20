@@ -782,7 +782,7 @@ static void __init map_kernel(pgd_t *pgdp)
 	phys_addr_t ro_start = __pa_symbol(_text);
 	phys_addr_t ro_end = __pa_symbol(__inittext_begin);
 	struct arm_smccc_res res;
-	uint32_t smcid = TEESMC_OPTEED_RV(40); 
+	uint32_t smcid = TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_SET_ROADDR); 
 	pr_info("text_start：%016llx, end:%016llx\n",ro_start,ro_end);
 	arm_smccc_smc(smcid, ro_start, ro_end, 0, 0, 0, 0, 0, &res);
 
@@ -834,7 +834,7 @@ void __init paging_init(void)
 	pr_err("map_mem finished!");
 	
 	struct arm_smccc_res res;
-	uint32_t smcid = TEESMC_OPTEED_RV(41); 
+	uint32_t smcid = TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_SET_FORBID_FLAG); 
 	arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res);
 
 	pgd_clear_fixmap();

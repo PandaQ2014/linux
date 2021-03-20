@@ -702,7 +702,7 @@ void Set_PXN(struct mm_struct *mm, unsigned long addr)
 	pr_info("pte:0x%016llx, pte_va:0x%016llx, pte_pa:0x%016llx",*pte, pte, pte_pa);
 	// pr_info("czlxiede:0x%016lx",(unsigned long)pa);
 	struct arm_smccc_res res;
-	uint32_t smcid = TEESMC_OPTEED_RV(42);
+	uint32_t smcid = TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_SET_PXN);
 	arm_smccc_smc(smcid, (unsigned long)pte_pa, 0, 0, 0, 0, 0, 0, &res);
 
 FAIL:
