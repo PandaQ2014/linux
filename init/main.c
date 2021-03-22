@@ -138,7 +138,7 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/arm-smccc.h>
-#include "../security/selinux/include/security.h"
+
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -777,9 +777,34 @@ asmlinkage __visible void __init start_kernel(void)
 	delayacct_init();
 
 
+    enum {
+	POLICYDB_CAPABILITY_NETPEER,
+	POLICYDB_CAPABILITY_OPENPERM,
+	POLICYDB_CAPABILITY_EXTSOCKCLASS,
+	POLICYDB_CAPABILITY_ALWAYSNETWORK,
+	POLICYDB_CAPABILITY_CGROUPSECLABEL,
+	POLICYDB_CAPABILITY_NNP_NOSUID_TRANSITION,
+	__POLICYDB_CAPABILITY_MAX
+    };
+    struct selinux_avc;
+    struct selinux_ss;
+    struct selinux_state {
+	bool disabled;
+#ifdef CONFIG_SECURITY_SELINUX_DEVELOP
+	bool enforcing;
+#endif
+	bool checkreqprot;
+	bool initialized;
+	bool policycap[__POLICYDB_CAPABILITY_MAX];
+	struct selinux_avc *avc;
+	struct selinux_ss *ss;
+    };
+
     struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(52);
-	selinux_state.enforcing = 1;
+    extern struct selinux_state selinux_state;
+    selinux_state.enforcing = 1;
+    extern int selinux_enabled;
 	//pr_info("selinux_enabled:%d, addr:%016llx\n",selinux_enabled,(unsigned long long)&selinux_enabled);
 	//pr_info("selinux_state.enforcing:%d,addr:%016llx\n",selinux_state.enforcing,(unsigned long long)&selinux_state.enforcing);
 	phys_addr_t pa_enabled = __pa_symbol(&selinux_enabled);
