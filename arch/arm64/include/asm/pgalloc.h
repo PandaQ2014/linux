@@ -33,6 +33,7 @@
 
 static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	return (pmd_t *)phys_to_virt(rkp_allocPageTable());
 	//return (pmd_t *)__get_free_page(PGALLOC_GFP);
 }
@@ -41,6 +42,7 @@ static inline void pmd_free(struct mm_struct *mm, pmd_t *pmdp)
 {
 	BUG_ON((unsigned long)pmdp & (PAGE_SIZE-1));
 	//free_page((unsigned long)pmdp);
+	//拦截页表释放操作 跳转到Secure World进行仿真
 	rkp_releasePageTable(virt_to_phys(pmdp));
 }
 
@@ -64,6 +66,7 @@ static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)
 
 static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	return (pud_t*)phys_to_virt(rkp_allocPageTable());
 	//return (pud_t *)__get_free_page(PGALLOC_GFP);
 }
@@ -72,6 +75,7 @@ static inline void pud_free(struct mm_struct *mm, pud_t *pudp)
 {
 	BUG_ON((unsigned long)pudp & (PAGE_SIZE-1));
 	//free_page((unsigned long)pudp);
+	//拦截页表释放操作 跳转到Secure World进行仿真
 	rkp_releasePageTable(virt_to_phys(pudp));
 }
 
@@ -97,6 +101,7 @@ extern void pgd_free(struct mm_struct *mm, pgd_t *pgdp);
 static inline pte_t *
 pte_alloc_one_kernel(struct mm_struct *mm)
 {
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	return (pte_t*)phys_to_virt(rkp_allocPageTable());
 	//return (pte_t *)__get_free_page(PGALLOC_GFP);
 }
@@ -107,6 +112,7 @@ pte_alloc_one(struct mm_struct *mm)
 	struct page *pte;
 
 	//pte = alloc_pages(PGALLOC_GFP, 0);
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	pte = phys_to_page(rkp_allocPageTable());
 	if (!pte)
 		return NULL;
@@ -125,6 +131,7 @@ pte_alloc_one(struct mm_struct *mm)
 static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 {
 	if (ptep)
+		//拦截页表释放操作 跳转到Secure World进行仿真
 		rkp_releasePageTable(virt_to_phys(ptep));
 		//free_page((unsigned long)ptep);
 }
@@ -132,6 +139,7 @@ static inline void pte_free_kernel(struct mm_struct *mm, pte_t *ptep)
 static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
 {
 	pgtable_page_dtor(pte);
+	//拦截页表释放操作 跳转到Secure World进行仿真
 	rkp_releasePageTable(page_to_phys(pte));
 	//__free_page(pte);
 }

@@ -38,9 +38,7 @@ static inline int copy_from_user(void *to, const void __user volatile *from,
 				 unsigned long n)
 {
 	__chk_user_ptr(from, n);
-	// pr_err("tools/virtio/linux/uaccess.h copy_from_user1");
 	volatile_memcpy(to, from, n);
-	// pr_err("tools/virtio/linux/uaccess.h copy_from_user2");
 	return 0;
 }
 

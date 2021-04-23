@@ -78,7 +78,7 @@ void set_swapper_pgd(pgd_t *pgdp, pgd_t pgd)
 
 	spin_lock(&swapper_pgdir_lock);
 	fixmap_pgdp = pgd_set_fixmap(__pa_symbol(pgdp));
-	pr_err("set_swapper_pgd");
+	//拦截页表写操作 跳转到Secure World进行仿真
 	rkp_setPageTableElement(RKP_PGD,PTPTR2ULPTR(fixmap_pgdp), PTVALUE2UL(pgd));
 	//WRITE_ONCE(*fixmap_pgdp, pgd);
 	/*
@@ -105,6 +105,7 @@ static phys_addr_t __init early_pgtable_alloc(void)
 {
 	phys_addr_t phys;
 	//void *ptr;
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	phys = rkp_allocPageTable();
 	//phys = memblock_phys_alloc(PAGE_SIZE, PAGE_SIZE);
 	if (!phys)
@@ -169,6 +170,7 @@ static int pud_set_huge_pa(pud_t *pudp_pa,pud_t *pudp, phys_addr_t phys, pgprot_
 	pr_err("pud_set_huge_pa");
 		}
 	}
+	//拦截页表写操作 跳转到Secure World进行仿真
 	rkp_setPageTableElementWithPa(RKP_PUD,(phys_addr_t)pudp_pa,PTVALUE2UL(new_pud));
 	return 1;
 }
@@ -184,6 +186,7 @@ static int pmd_set_huge_pa(pmd_t *pmdp_pa,pmd_t *pmdp, phys_addr_t phys, pgprot_
 
 	BUG_ON(phys & ~PMD_MASK);
 	//set_pmd(pmdp, new_pmd);//v2
+	//拦截页表写操作 跳转到Secure World进行仿真
 	rkp_setPageTableElementWithPa(RKP_PMD,(phys_addr_t)pmdp_pa,PTVALUE2UL(new_pmd));
 	return 1;
 }
@@ -220,16 +223,15 @@ static void init_pte(pmd_t *pmdp, unsigned long addr, unsigned long end,
 	ptep_pa = (pte_t *)pte_offset_phys(pmdp, addr);
 	do {
 		pte_t old_pte = READ_ONCE(*ptep);
+		//如果是安全内存 设置页表权限为只读
 		if(rkp_paIsManaged(phys)){
-			pr_err("rkp_paIsManaged 0x%016llx",phys); 
+			//拦截页表写操作 跳转到Secure World进行仿真
 			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), __pgprot((pgprot_val(prot)&~PTE_WRITE) | pgprot_val(PAGE_KERNEL_RO))));
-			// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
-			//PAGE_KERNEL_RO PAGE_HYP_RO
 		}else{
 			//set_pte(ptep, pfn_pte(__phys_to_pfn(phys), prot));//v2
+			//拦截页表写操作 跳转到Secure World进行仿真
 			rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		}
-		// rkp_setPageTableElementWithPa(RKP_PTE,(phys_addr_t)ptep_pa,*(unsigned long *)&pfn_pte(__phys_to_pfn(phys), prot));
 		/*
 		 * After the PTE entry has been populated once, we
 		 * only allow updates to the permission attributes.
@@ -292,11 +294,11 @@ static void alloc_init_cont_pte_pa(pmd_t *pmdp_pa,pmd_t *pmdp, unsigned long add
 		phys_addr_t pte_phys;
 		BUG_ON(!pgtable_alloc);
 		pte_phys = pgtable_alloc();
-		pr_err("pageinit:0x%016llx alloc_init_cont_pte_pa",(unsigned long long)pte_phys);
 		if(PTMAPED == 1){
 			rkp_set_PTMAPED();
 		}
 		//__pmd_populate(pmdp, pte_phys, PMD_TYPE_TABLE);//v2
+		//拦截页表写操作 跳转到Secure World进行仿真
 		rkp_setPageTableElementWithPa(RKP_PMD,(phys_addr_t)pmdp_pa,*(unsigned long *)&__pmd(__phys_to_pmd_val(pte_phys) | PMD_TYPE_TABLE));
 		pmd = READ_ONCE(*pmdp);
 	}
@@ -407,11 +409,12 @@ static void alloc_init_cont_pmd_pa(pud_t *pudp_pa,pud_t *pudp, unsigned long add
 		phys_addr_t pmd_phys;
 		BUG_ON(!pgtable_alloc);
 		pmd_phys = pgtable_alloc();
-		pr_err("pageinit:0x%016llx alloc_init_cont_pmd_pa",(unsigned long long)pmd_phys);
 		//__pud_populate(pudp, pmd_phys, PUD_TYPE_TABLE);//v2
+		//如果是安全内存 跳转到Secure World进行仿真
 		if(!rkp_paIsManaged(pudp_pa)){
 			__pud_populate(pudp, pmd_phys, PUD_TYPE_TABLE);
 		}else{
+			//拦截页表写操作 跳转到Secure World进行仿真
 			rkp_setPageTableElementWithPa(RKP_PUD,(phys_addr_t)pudp_pa,*(unsigned long *)&__pud(__phys_to_pud_val(pmd_phys) | PUD_TYPE_TABLE));
 		}		
 		pud = READ_ONCE(*pudp);
@@ -533,6 +536,7 @@ static void __create_pgd_mapping(pgd_t *pgdir, phys_addr_t phys,
 static phys_addr_t pgd_pgtable_alloc(void)
 {
 	//void *ptr = (void *)__get_free_page(PGALLOC_GFP);
+	//拦截页表分配操作 跳转到Secure World进行仿真
 	void * ptr = phys_to_virt(rkp_allocPageTable());
 	if (!ptr || !pgtable_page_ctor(virt_to_page(ptr)))
 		BUG();
@@ -779,6 +783,11 @@ static void __init map_kernel(pgd_t *pgdp)
 	 * Only rodata will be remapped with different permissions later on,
 	 * all other segments are allowed to use contiguous mappings.
 	 */
+	
+	/*
+	 *将要防止双重映射的内核代码段和只读数据段的虚拟起始地址和结束地址转化为物理起始地址和结束地址
+	 *将物理起始地址和结束地址通过smc指令传送到Secure World保存
+	 */
 	phys_addr_t ro_start = __pa_symbol(_text);
 	phys_addr_t ro_end = __pa_symbol(__inittext_begin);
 	struct arm_smccc_res res;
@@ -829,25 +838,20 @@ void __init paging_init(void)
 
 	
 	map_kernel(pgdp);
-	pr_err("map_kernel finished!");
 	map_mem(pgdp);
-	pr_err("map_mem finished!");
-	
+	//在内核段映射完成之后开启防止双重映射功能
 	struct arm_smccc_res res;
 	uint32_t smcid = TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_SET_FORBID_FLAG); 
 	arm_smccc_smc(smcid,0,0,0,0,0,0,0,&res);
 
 	pgd_clear_fixmap();
-	pr_err("pgd_clear_fixmap finished!");
 	cpu_replace_ttbr1(lm_alias(swapper_pg_dir));
 	init_mm.pgd = swapper_pg_dir;
-	pr_err("cpu_replace_ttbr1 finished!");
-	pr_err("memblock_free 0x%016llx-0x%016llx",__pa_symbol(init_pg_dir),__pa_symbol(init_pg_end) - __pa_symbol(init_pg_dir));
 	memblock_free(__pa_symbol(init_pg_dir),
 		      __pa_symbol(init_pg_end) - __pa_symbol(init_pg_dir));
 	memblock_allow_resize();
+	//设置内核页表被映射的flag
 	rkp_set_PTMAPED();
-	pr_err("paging finished!");
 }
 
 /*

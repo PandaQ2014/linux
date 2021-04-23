@@ -25,6 +25,7 @@
 void __cpu_copy_user_page(void *kto, const void *kfrom, unsigned long vaddr)
 {
 	struct page *page = virt_to_page(kto);
+	//如果是安全内存 跳转到Secure World进行仿真
 	if(rkp_paIsManaged(virt_to_phys(kto))){
 		rkp_copy_page(kto,kfrom,PAGE_SIZE);
 	}else{
@@ -36,6 +37,7 @@ EXPORT_SYMBOL_GPL(__cpu_copy_user_page);
 
 void __cpu_clear_user_page(void *kaddr, unsigned long vaddr)
 {
+	//如果是安全内存 跳转到Secure World进行仿真
 	if(rkp_paIsManaged(virt_to_phys(kaddr))){
 		rkp_clear_page(kaddr);
 		return;

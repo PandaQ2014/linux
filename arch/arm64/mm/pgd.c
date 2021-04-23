@@ -31,6 +31,7 @@ static struct kmem_cache *pgd_cache __ro_after_init;
 pgd_t *pgd_alloc(struct mm_struct *mm)
 {
 	if (PGD_SIZE == PAGE_SIZE)
+		//拦截页表分配操作 跳转到Secure World进行仿真
 		return (pgd_t *)phys_to_virt(rkp_allocPageTable());
 		//return (pgd_t *)__get_free_page(PGALLOC_GFP);
 	else{
@@ -43,6 +44,7 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
 	if (PGD_SIZE == PAGE_SIZE)
+		//拦截页表释放操作 跳转到Secure World进行仿真
 		rkp_releasePageTable(virt_to_phys(pgd));
 		//free_page((unsigned long)pgd);
 	else

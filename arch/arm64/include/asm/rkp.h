@@ -26,10 +26,8 @@ extern phys_addr_t POOLEND;
 #define rkp_paIsManaged(pa) ((phys_addr_t)pa > POOLSTART-1 && (phys_addr_t)pa < POOLEND)
 #define PTVALUE2UL(a) *(unsigned long*)&a 
 #define PTPTR2ULPTR(a) *(unsigned long **)&a
-#define TEESMC_OPTEED_FUNCID_TZC400_SET_READONLY 11
-#define TEESMC_OPTEED_TZC400_SET_READONLY \
-	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_TZC400_SET_READONLY)
 
+//定义功能对应的smc指令id
 #define TEESMC_OPTEED_FUNCID_RKP_PTM_INIT 20
 #define TEESMC_OPTEED_RKP_PTM_INIT \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_PTM_INIT)
@@ -54,9 +52,6 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_RKP_MEM_SET 27
 #define TEESMC_OPTEED_RKP_MEM_SET \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_MEM_SET)
-#define TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH 28
-#define TEESMC_OPTEED_RKP_CFU_PATCH \
-	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_RKP_CFU_PATCH)
 
 #define TEESMC_OPTEED_FUNCID_RKP_SET_ROADDR 40
 #define TEESMC_OPTEED_RKP_SET_ROADDR \
@@ -86,24 +81,23 @@ void rkp_instruction_simulation(unsigned long instr_mark,unsigned long param2,
                                 unsigned long param3,unsigned long param4);
 
 unsigned long rkp_xchg_relaxed(int ptType,unsigned long* ptePtr, unsigned long newVal);
+
 unsigned long rkp_cmpxchg_relaxed(int ptType,unsigned long* ptePtr, unsigned long oldVal, unsigned long newVal);
 
 extern int PTMAPED;
+
 int rkp_iscross_with_ptm(phys_addr_t start, phys_addr_t end);
+
 #define RKP_ISCROSS(a,b) (PTMAPED == 0 ? rkp_iscross_with_ptm(a,b) : 0)
+
 void rkp_set_PTMAPED(void);
 
 void rkp_clear_page(void * kaddr);
+
 unsigned long rkp_copy_page(void *kto,const void* kfrom, unsigned long n);
 
 int rkp_pa_is_managed(phys_addr_t pa);
 
 void* rkp_mem_set(void *, int, unsigned long);
-
-void rkp_copy_from_user_patch_on(void);
-
-void rkp_copy_from_user_patch_off(void);
-
-
 
 #endif
