@@ -464,7 +464,6 @@ static void alloc_init_pud(pgd_t *pgdp, unsigned long addr, unsigned long end,
 		phys_addr_t pud_phys;
 		BUG_ON(!pgtable_alloc);
 		pud_phys = pgtable_alloc();
-		pr_err("pageinit:0x%016llx alloc_init_pud",(unsigned long long)pud_phys);
 		__pgd_populate(pgdp, pud_phys, PUD_TYPE_TABLE);
 		pgd = READ_ONCE(*pgdp);
 	}

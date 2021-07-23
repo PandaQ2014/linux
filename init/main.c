@@ -1283,6 +1283,7 @@ static noinline void __init kernel_init_freeable(void)
 #include <linux/printk.h>
 #include <linux/delay.h>
 #include <linux/kthread.h>
+#include <linux/sched.h>
 
 int pkm_kernel_thread_func(void *data){
     ssleep(2);
@@ -1311,14 +1312,14 @@ int pkm_kernel_thread_func(void *data){
             panic("error");
         }
         else{
-            if(monitor_B->state==2)//判断所监控线程的task_struct结构体状态
+            if(monitor_B->state==TASK_UNINTERRUPTIBLE)//判断所监控线程的task_struct结构体状态
                 monitor_B_time=get_seconds();//获取现在的时间
-            else if (monitor_B->state==4 ||monitor_B->state==16 ||monitor_B->state==32||monitor_B->state==128){
+            else if (monitor_B->state==__TASK_STOPPED ||monitor_B->state==EXIT_DEAD ||monitor_B->state==EXIT_ZOMBIE||monitor_B->state==TASK_DEAD){
                 panic("error");
             }
             else
                 ;
-            while(monitor_B->state==2){
+            while(monitor_B->state==TASK_UNINTERRUPTIBLE){
                 monitor_B_time_now=get_seconds();
                 if (monitor_B_time_now-monitor_B_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
@@ -1345,14 +1346,14 @@ int pkm_kernel_thread_monitor1(void *data){
             panic("error");
             }
         else{
-            if(monitor_C->state==2)//判断所监控线程的task_struct结构体状态
+            if(monitor_C->state==TASK_UNINTERRUPTIBLE)//判断所监控线程的task_struct结构体状态
                 monitor_C_time=get_seconds();
-            else if (monitor_C->state==4 ||monitor_C->state==16 ||monitor_C->state==32||monitor_C->state==128){
+            else if (monitor_C->state==__TASK_STOPPED ||monitor_C->state==EXIT_DEAD ||monitor_C->state==EXIT_ZOMBIE||monitor_C->state==TASK_DEAD){
                 panic("error");
             }
             else
                 ;
-            while(monitor_C->state==2){
+            while(monitor_C->state==TASK_UNINTERRUPTIBLE){
                 monitor_C_time_now=get_seconds();
                 if (monitor_C_time_now-monitor_C_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
@@ -1381,15 +1382,15 @@ int pkm_kernel_thread_monitor2(void *data){
             panic("error");
         }
         else{
-            if(master_A->state==2)//判断所监控线程的task_struct结构体状态
+            if(master_A->state==TASK_UNINTERRUPTIBLE)//判断所监控线程的task_struct结构体状态
                 monitor_A_time=get_seconds();
-            else if (master_A->state==4 ||master_A->state==16 ||master_A->state==32 ||master_A->state==128)                     
+            else if (master_A->state==__TASK_STOPPED ||master_A->state==EXIT_DEAD ||master_A->state==EXIT_ZOMBIE ||master_A->state==TASK_DEAD)                     
             {
                 panic("error");
             }
             else
                 ;
-            while(master_A->state==2){
+            while(master_A->state==TASK_UNINTERRUPTIBLE){
                 monitor_A_time_now=get_seconds();
                 if (monitor_A_time_now-monitor_A_time>5){//如果时间差超过了预设的值，说明线程环中可能有线程被永久挂起了
                     panic("error");
