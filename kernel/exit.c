@@ -770,12 +770,21 @@ static void check_stack_usage(void)
 #else
 static inline void check_stack_usage(void) {}
 #endif
-
+#include <asm/rkp.h>
 void __noreturn do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
-
+	if(find_task_addr((unsigned long long)tsk) == 1)
+	{
+		// pr_info("task is under protection");
+		// return;
+		panic("task is under protection");
+	}
+	// pr_info("exit:0x%016llx\n", (unsigned long long)tsk);
+	// pr_info("exit-- pid: %d, stack: 0x%016llx\n", tsk->pid, tsk->stack);
+	
+	short tskpid = tsk->pid;
 	profile_task_exit(tsk);
 	kcov_task_exit(tsk);
 
@@ -932,6 +941,8 @@ void __noreturn do_exit(long code)
 
 	lockdep_free_task(tsk);
 	do_task_dead();
+	
+	// free_pid_and_stack(tskpid);
 }
 EXPORT_SYMBOL_GPL(do_exit);
 

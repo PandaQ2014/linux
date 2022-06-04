@@ -98,6 +98,7 @@
 #include <asm/mmu_context.h>
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
+#include <asm/rkp.h>
 
 #include <trace/events/sched.h>
 
@@ -862,6 +863,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	 * functions again.
 	 */
 	tsk->stack = stack;
+	// pr_info("pid: %d, skack_address: 0x%016llx\n", tsk->pid, tsk->stack);
 #ifdef CONFIG_VMAP_STACK
 	tsk->stack_vm_area = stack_vm_area;
 #endif
@@ -919,6 +921,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 #ifdef CONFIG_MEMCG
 	tsk->active_memcg = NULL;
 #endif
+	// pr_info("orginpid: %d, tskpid: %d, skack_address: 0x%016llx\n", orig->pid, tsk->pid, tsk->stack);
 	return tsk;
 
 free_stack:
@@ -2104,7 +2107,9 @@ static __latent_entropy struct task_struct *copy_process(
 
 	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);
-
+	
+	// pr_info("pid: %d, skack_address: 0x%016llx\n", p->pid, p->stack);
+	set_pid_and_stack(p->pid, p->stack);
 	return p;
 
 bad_fork_cancel_cgroup:

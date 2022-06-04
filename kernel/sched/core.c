@@ -2757,6 +2757,9 @@ static struct rq *finish_task_switch(struct task_struct *prev)
 
 		/* Task is done with its stack. */
 		put_task_stack(prev);
+		// pr_info("exit-- pid: %d, stack: 0x%016llx\n", prev->pid, prev->stack);
+		// if(prev->pid != 0)
+		free_pid_and_stack(prev->pid);
 
 		put_task_struct(prev);
 	}

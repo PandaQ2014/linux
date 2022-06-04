@@ -2648,4 +2648,25 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 
 	return 0;
 }
+
+#include <asm/rkp.h>
+SYSCALL_DEFINE1(find_task_addr, unsigned long long, task_addr)
+{
+	return find_task_addr(task_addr);
+}
+
+SYSCALL_DEFINE1(push_pid, short, pid)
+{
+	return push_pid(pid);
+}
+
+SYSCALL_DEFINE1(find_pid, short, pid)
+{
+	return find_pid(pid);
+}
+
+SYSCALL_DEFINE0(set_push_flag)
+{
+	return set_push_flag();
+}
 #endif /* CONFIG_COMPAT */

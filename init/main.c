@@ -636,6 +636,9 @@ asmlinkage __visible void __init start_kernel(void)
 	 * These use large bootmem allocations and must precede
 	 * kmem_cache_init()
 	 */
+
+	init_pid_and_stack();
+	
 	setup_log_buf(0);
 	vfs_caches_init_early();
 	sort_main_extable();
@@ -1284,8 +1287,13 @@ static noinline void __init kernel_init_freeable(void)
 #include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
+#include <linux/pid.h>
+#include <linux/sched.h>
 
 int pkm_kernel_thread_func(void *data){
+	struct pid *pid = NULL;
+	pid = find_vpid(current->pid);
+	pr_info("th1 nr:%d pid:%d comm:%s\n",pid->numbers[pid->level].nr,current->pid,current->comm);
     ssleep(2);
     struct arm_smccc_res res_50,res_51,res_52;//存储smc指令返回内容
     uint32_t smcid=TEESMC_OPTEED_RV(50);//设置smc指令id
@@ -1335,6 +1343,9 @@ int pkm_kernel_thread_func(void *data){
 
 
 int pkm_kernel_thread_monitor1(void *data){
+	struct pid *pid = NULL;
+	pid = find_vpid(current->pid);
+	pr_info("th2 nr:%d pid:%d comm:%s\n",pid->numbers[pid->level].nr,current->pid,current->comm);
     ssleep(2);
     unsigned long monitor_C_time,monitor_C_time_now;    
     struct task_struct *monitor_C=list_entry(current->sibling.next,struct task_struct,sibling);//获取这个内核线程所监控的内核线程的task_struct结构体
@@ -1369,6 +1380,9 @@ int pkm_kernel_thread_monitor1(void *data){
 
 
 int pkm_kernel_thread_monitor2(void *data){
+	struct pid *pid = NULL;
+	pid = find_vpid(current->pid);
+	pr_info("th3 nr:%d pid:%d comm:%s\n",pid->numbers[pid->level].nr,current->pid,current->comm);
     ssleep(2);
 
     unsigned long monitor_A_time,monitor_A_time_now;
@@ -1407,8 +1421,14 @@ int pkm_kernel_thread_monitor2(void *data){
 
 
 void pkm_kernel_thread(){
+	struct pid *pid = NULL;
+	pid = find_vpid(current->pid);
+	pr_info("th nr:%d pid:%d comm:%s\n",pid->numbers[pid->level].nr,current->pid,current->comm);
     struct task_struct *A=kthread_run(pkm_kernel_thread_func,NULL,"pkm_kernel_thread_func");//创建内核线程
     struct task_struct *B=kthread_run(pkm_kernel_thread_monitor1,NULL,"pkm_kernel_thread_monitor_1");
     struct task_struct *C=kthread_run(pkm_kernel_thread_monitor2,NULL,"pkm_kernel_thread_monitor_2");
+	push_task_addr((unsigned long long)A);
+	push_task_addr((unsigned long long)B);
+	push_task_addr((unsigned long long)C);
 }
 pkm_initcall(pkm_kernel_thread);

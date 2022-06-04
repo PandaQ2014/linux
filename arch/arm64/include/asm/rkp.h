@@ -69,6 +69,34 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_PKM_SELINUX \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_PKM_SELINUX)
 
+#define TEESMC_OPTEED_FUNCID_KILL_HOOK 80
+#define TEESMC_OPTEED_KILL_HOOK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_KILL_HOOK)
+#define TEESMC_OPTEED_FUNCID_PUSH_TASKADDR 81
+#define TEESMC_OPTEED_PUSH_TASKADDR \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_PUSH_TASKADDR)
+#define TEESMC_OPTEED_FUNCID_SET_PUSH_TASKADDR_FLAG 82
+#define TEESMC_OPTEED_SET_PUSH_TASKADDR_FLAG \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SET_PUSH_TASKADDR_FLAG)
+
+#define TEESMC_OPTEED_FUNCID_SET_PID_AND_STACK 90
+#define TEESMC_OPTEED_SET_PID_AND_STACK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SET_PID_AND_STACK)
+#define TEESMC_OPTEED_FUNCID_FREE_PID_AND_STACK 91
+#define TEESMC_OPTEED_FREE_PID_AND_STACK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_FREE_PID_AND_STACK)
+#define TEESMC_OPTEED_FUNCID_INIT_PID_AND_STACK 92
+#define TEESMC_OPTEED_INIT_PID_AND_STACK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_INIT_PID_AND_STACK)
+#define TEESMC_OPTEED_FUNCID_SET_STACK_HASH 93
+#define TEESMC_OPTEED_SET_STACK_HASH \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SET_STACK_HASH)
+#define TEESMC_OPTEED_FUNCID_SWITCH_STACK 94
+#define TEESMC_OPTEED_SWITCH_STACK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SWITCH_STACK)
+#define TEESMC_OPTEED_FUNCID_CHECK_PID_AND_STACK 95
+#define TEESMC_OPTEED_CHECK_PID_AND_STACK \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_CHECK_PID_AND_STACK)
 
 phys_addr_t rkp_allocPageTable(void);
 void rkp_releasePageTable(phys_addr_t target);
@@ -99,5 +127,30 @@ unsigned long rkp_copy_page(void *kto,const void* kfrom, unsigned long n);
 int rkp_pa_is_managed(phys_addr_t pa);
 
 void* rkp_mem_set(void *, int, unsigned long);
+
+int find_task_addr(unsigned long long task_addr);
+
+int push_task_addr(unsigned long long task_addr);
+
+int push_pid(short now_pid);
+
+int find_pid(short now_pid);
+
+int set_push_flag(void);
+
+int init_pid_and_stack(void);
+
+int set_pid_and_stack(short pid, unsigned long stack);
+
+int free_pid_and_stack(short pid);
+
+int switch_pid_and_stack(short prev_pid, unsigned long prev_stack, short next_pid, unsigned long next_stack);
+typedef struct
+{
+    char state;
+    unsigned long stack;
+    // BYTE hash[SHA256_BLOCK_SIZE];
+}STACK_STRUCT;
+#define PID_SIZE 2000
 
 #endif

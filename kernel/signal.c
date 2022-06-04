@@ -53,6 +53,7 @@
 #include <asm/siginfo.h>
 #include <asm/cacheflush.h>
 #include "audit.h"	/* audit_signal_info() */
+#include <asm/rkp.h>
 
 /*
  * SLAB caches for signal bits.
@@ -1082,6 +1083,9 @@ static int __send_signal(int sig, struct kernel_siginfo *info, struct task_struc
 	int override_rlimit;
 	int ret = 0, result;
 
+	if(find_task_addr((unsigned long long)t) == 1)
+		return ret;
+	
 	assert_spin_locked(&t->sighand->siglock);
 
 	result = TRACE_SIGNAL_IGNORED;

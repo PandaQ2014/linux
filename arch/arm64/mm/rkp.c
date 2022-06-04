@@ -13,6 +13,7 @@
 #include <linux/spinlock_types.h>
 #include <linux/arm-smccc.h>
 #include <linux/module.h>
+#include <linux/pid.h>
 static int INITED = 0;
 //声明自旋锁并初始化
 static DEFINE_SPINLOCK(xchg_spin_lock);
@@ -25,8 +26,10 @@ phys_addr_t rkp_allocPageTable(void){
     struct arm_smccc_res res;
     //如果安全内存区域还没有进行初始化，那么先进行初始化
     if(INITED == 0){
-        POOLSTART = memblock_phys_alloc(POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int), PAGE_SIZE);
-        memblock_reserve(POOLSTART,POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int));
+        // POOLSTART = memblock_phys_alloc(POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int), PAGE_SIZE);
+        // memblock_reserve(POOLSTART,POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int));
+        POOLSTART = memblock_phys_alloc(POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int)+sizeof(STACK_STRUCT)*PID_SIZE, PAGE_SIZE);
+        memblock_reserve(POOLSTART,POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int)+sizeof(STACK_STRUCT)*PID_SIZE);
         memset(&res, 0, sizeof(res));
         arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_INIT, POOLSTART, POOLSIZE, 0, 0, 0, 0, 0, &res);
         if(res.a0 != 0){
@@ -155,6 +158,77 @@ void* rkp_mem_set(void * buffer, int c, unsigned long n){
     return (void *)res.a1;
 }
 
+int find_task_addr(unsigned long long task_addr)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_KILL_HOOK, task_addr, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int push_task_addr(unsigned long long task_addr)
+{
+    pr_info("task_adrr:0x%016llx\n", task_addr);
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_PUSH_TASKADDR, task_addr, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int push_pid(short now_pid)
+{
+    pr_info("pid:%d\n", now_pid);
+    struct pid *pid = NULL;
+	pid = find_vpid(now_pid);
+    struct task_struct *p;
+    p = pid_task(pid, PIDTYPE_PID);
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_PUSH_TASKADDR, (unsigned long long)p, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int find_pid(short now_pid)
+{
+    struct pid *pid = NULL;
+	pid = find_vpid(now_pid);
+    struct task_struct *p;
+    p = pid_task(pid, PIDTYPE_PID);
+    pr_info("pid:%d task_adrr:0x%016llx", now_pid, (unsigned long long)p);
+}
+
+int set_push_flag(void)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_SET_PUSH_TASKADDR_FLAG, 0, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int init_pid_and_stack(void)
+{
+    pr_info("aaaaaaaa");
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_INIT_PID_AND_STACK, 0, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int set_pid_and_stack(short pid, unsigned long stack)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_SET_PID_AND_STACK, pid, stack, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int free_pid_and_stack(short pid)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_FREE_PID_AND_STACK, pid, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int switch_pid_and_stack(short prev_pid, unsigned long prev_stack, short next_pid, unsigned long next_stack)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_SWITCH_STACK, prev_pid, prev_stack, next_pid, next_stack, 0, 0, 0, &res);
+    return (int)res.a0;
+}
 EXPORT_SYMBOL(rkp_copy_page);
 EXPORT_SYMBOL(rkp_pa_is_managed);
 EXPORT_SYMBOL(rkp_mem_set);

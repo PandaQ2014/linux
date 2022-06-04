@@ -60,6 +60,7 @@
 #include <asm/processor.h>
 #include <asm/pointer_auth.h>
 #include <asm/stacktrace.h>
+#include <asm/rkp.h>
 
 #if defined(CONFIG_STACKPROTECTOR) && !defined(CONFIG_STACKPROTECTOR_PER_TASK)
 #include <linux/stackprotector.h>
@@ -493,7 +494,8 @@ __notrace_funcgraph struct task_struct *__switch_to(struct task_struct *prev,
 
 	/* the actual thread switch */
 	last = cpu_switch_to(prev, next);
-
+	switch_pid_and_stack(prev->pid, prev->stack, next->pid, next->stack);
+	// pr_info("switch_to:\n prev: pid: %d, stack:0x%016llx\n next: pid: %d, stack:0x%016llx", prev->pid, prev->stack, next->pid, next->stack);
 	return last;
 }
 
