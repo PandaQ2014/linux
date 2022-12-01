@@ -21,6 +21,9 @@ static DEFINE_SPINLOCK(ptmanager_spin_lock);
 static DEFINE_SPINLOCK(cfu_patch_spin_lock);
 phys_addr_t POOLSTART = 0; //初始值保证rkp_paIsManaged宏在RKP未初始化前始终返回false
 phys_addr_t POOLEND = 0;
+
+phys_addr_t SSPOOLSTART = 0;
+phys_addr_t SSPOOLEND = 0;
 //分配页表
 phys_addr_t rkp_allocPageTable(void){
     struct arm_smccc_res res;
@@ -30,14 +33,28 @@ phys_addr_t rkp_allocPageTable(void){
         // memblock_reserve(POOLSTART,POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int));
         POOLSTART = memblock_phys_alloc(POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int)+sizeof(STACK_STRUCT)*PID_SIZE, PAGE_SIZE);
         memblock_reserve(POOLSTART,POOLSIZE*PAGE_SIZE+POOLSIZE*sizeof(unsigned int)+sizeof(STACK_STRUCT)*PID_SIZE);
+
+        int page_count = ((sizeof(STACK_STRUCT) + sizeof(CRED_STRUCT)) * PID_SIZE / PAGE_SIZE) + 1;
+        int sspool_size = page_count * PAGE_SIZE;
+        SSPOOLSTART = memblock_phys_alloc(sspool_size, PAGE_SIZE);
+        memblock_reserve(SSPOOLSTART, sspool_size);
+        // SSPOOLSTART = memblock_phys_alloc(sizeof(STACK_STRUCT)*PID_SIZE + sizeof(CRED_STRUCT)*PID_SIZE, PAGE_SIZE);
+        // memblock_reserve(SSPOOLSTART,sizeof(STACK_STRUCT)*PID_SIZE + sizeof(CRED_STRUCT)*PID_SIZE);
+
         memset(&res, 0, sizeof(res));
-        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_INIT, POOLSTART, POOLSIZE, 0, 0, 0, 0, 0, &res);
+        // arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_INIT, POOLSTART, POOLSIZE, 0, 0, 0, 0, 0, &res);
+        arm_smccc_smc(TEESMC_OPTEED_RKP_PTM_INIT, POOLSTART, POOLSIZE, SSPOOLSTART, 0, 0, 0, 0, &res);
         if(res.a0 != 0){
             pr_err("TEESMC_OPTEED_RKP_PTM_INIT failed");
             return 0;
         }
+
         POOLEND = POOLSTART + POOLSIZE*PAGE_SIZE;
+        SSPOOLEND = SSPOOLSTART + sizeof(STACK_STRUCT)*PID_SIZE + sizeof(CRED_STRUCT)*PID_SIZE;
+
         pr_err("PTM start 0x%016llx end 0x%016llx",POOLSTART,POOLEND);
+        pr_err("SSPOOL start 0x%016llx end 0x%016llx", SSPOOLSTART, SSPOOLEND);
+
         INITED = 1;
     }
 
@@ -227,6 +244,34 @@ int switch_pid_and_stack(short prev_pid, unsigned long prev_stack, short next_pi
 {
     struct arm_smccc_res res;
     arm_smccc_smc(TEESMC_OPTEED_SWITCH_STACK, prev_pid, prev_stack, next_pid, next_stack, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int visit_stack_struct()
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_VISIT_STACK_STRUCT, 0, 0, 0, 0, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int set_cred(short pid, unsigned long task_struct_addr, unsigned long cred_addr, unsigned long pgd_addr)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_SET_CRED, pid, task_struct_addr, cred_addr, pgd_addr, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int check_cred(short pid, unsigned long task_struct_addr, unsigned long cred_addr, unsigned long pgd_addr)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_CHECK_CRED, pid, task_struct_addr, cred_addr, pgd_addr, 0, 0, 0, &res);
+    return (int)res.a0;
+}
+
+int free_cred(short pid)
+{
+    struct arm_smccc_res res;
+    arm_smccc_smc(TEESMC_OPTEED_FREE_CRED, pid, 0, 0, 0, 0, 0, 0, &res);
     return (int)res.a0;
 }
 EXPORT_SYMBOL(rkp_copy_page);

@@ -78,6 +78,15 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_SET_PUSH_TASKADDR_FLAG 82
 #define TEESMC_OPTEED_SET_PUSH_TASKADDR_FLAG \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SET_PUSH_TASKADDR_FLAG)
+#define TEESMC_OPTEED_FUNCID_SET_CRED 83
+#define TEESMC_OPTEED_SET_CRED \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_SET_CRED)
+#define TEESMC_OPTEED_FUNCID_FREE_CRED 84
+#define TEESMC_OPTEED_FREE_CRED \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_FREE_CRED)
+#define TEESMC_OPTEED_FUNCID_CHECK_CRED 85
+#define TEESMC_OPTEED_CHECK_CRED \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_CHECK_CRED)
 
 #define TEESMC_OPTEED_FUNCID_SET_PID_AND_STACK 90
 #define TEESMC_OPTEED_SET_PID_AND_STACK \
@@ -97,6 +106,9 @@ extern phys_addr_t POOLEND;
 #define TEESMC_OPTEED_FUNCID_CHECK_PID_AND_STACK 95
 #define TEESMC_OPTEED_CHECK_PID_AND_STACK \
 	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_CHECK_PID_AND_STACK)
+#define TEESMC_OPTEED_FUNCID_VISIT_STACK_STRUCT 96
+#define TEESMC_OPTEED_VISIT_STACK_STRUCT \
+	TEESMC_OPTEED_RV(TEESMC_OPTEED_FUNCID_VISIT_STACK_STRUCT)
 
 phys_addr_t rkp_allocPageTable(void);
 void rkp_releasePageTable(phys_addr_t target);
@@ -145,12 +157,44 @@ int set_pid_and_stack(short pid, unsigned long stack);
 int free_pid_and_stack(short pid);
 
 int switch_pid_and_stack(short prev_pid, unsigned long prev_stack, short next_pid, unsigned long next_stack);
+
+int visit_stack_struct(void);
+
+int set_cred(short pid, unsigned long task_struct_addr, unsigned long cred_addr, unsigned long pgd_addr);
+
+int check_cred(short pid, unsigned long task_struct_addr, unsigned long cred_addr, unsigned long pgd_addr);
+
+int free_cred(short pid);
+
+
+#define SHA256_BLOCK_SIZE 32            // SHA256 outputs a 32 byte digest
+
+typedef unsigned char BYTE;             // 8-bit byte
+
+//stack protection
 typedef struct
 {
+    short pid;
     char state;
     unsigned long stack;
     // BYTE hash[SHA256_BLOCK_SIZE];
 }STACK_STRUCT;
-#define PID_SIZE 2000
+
+//cred protection
+typedef struct
+{
+    short pid;
+    unsigned long cred_addr;
+    unsigned long task_struct_addr;
+    unsigned long pgd;
+    unsigned int uid;
+    unsigned int gid;
+    unsigned int suid;
+    unsigned int sgid;
+    unsigned int euid;
+    unsigned int egid;
+}CRED_STRUCT;
+
+#define PID_SIZE 700
 
 #endif

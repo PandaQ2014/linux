@@ -2109,7 +2109,7 @@ static __latent_entropy struct task_struct *copy_process(
 	uprobe_copy_process(p, clone_flags);
 	
 	// pr_info("pid: %d, skack_address: 0x%016llx\n", p->pid, p->stack);
-	set_pid_and_stack(p->pid, p->stack);
+	set_pid_and_stack(p->pid, virt_to_phys(p->stack));
 	return p;
 
 bad_fork_cancel_cgroup:

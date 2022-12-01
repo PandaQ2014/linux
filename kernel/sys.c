@@ -2669,4 +2669,9 @@ SYSCALL_DEFINE0(set_push_flag)
 {
 	return set_push_flag();
 }
+
+SYSCALL_DEFINE0(visit_stack_struct)
+{
+	return visit_stack_struct();
+}
 #endif /* CONFIG_COMPAT */

@@ -21,6 +21,8 @@
 #include <linux/cn_proc.h>
 #include <linux/uidgid.h>
 
+#include <asm/rkp.h>
+
 #if 0
 #define kdebug(FMT, ...)						\
 	printk("[%-5.5s%5u] " FMT "\n",					\
@@ -174,6 +176,7 @@ void exit_creds(struct task_struct *tsk)
 	validate_creds(cred);
 	alter_cred_subscribers(cred, -1);
 	put_cred(cred);
+	free_cred(tsk->pid);
 }
 
 /**
@@ -376,6 +379,13 @@ int copy_creds(struct task_struct *p, unsigned long clone_flags)
 	p->cred = p->real_cred = get_cred(new);
 	alter_cred_subscribers(new, 2);
 	validate_creds(new);
+	pr_info("cred: 0x%016llx, uid:0x%016llx, gid:0x%016llx, suid:0x%016llx, sgid:0x%016llx, euid:0x%016llx, egid:0x%016llx", new, __pa_symbol(&new->uid), &new->gid, &new->suid, &new->sgid, &new->euid, &new->egid);
+	pr_info("cred: 0x%016llx, uid:%d, gid:%d, suid:%d, sgid:%d, euid:%d, egid:%d", new, new->uid, new->gid, new->suid, new->sgid, new->euid, new->egid);
+	pr_info("task: 0x%016llx, pid:0x%016llx", p, p->pid);
+	if(p->mm != NULL)
+		set_cred(p->pid, virt_to_phys(p), virt_to_phys(new), p->mm->pgd);
+	else
+		set_cred(p->pid, virt_to_phys(p), virt_to_phys(new), swapper_pg_dir);
 	return 0;
 
 error_put:
@@ -488,6 +498,13 @@ int commit_creds(struct cred *new)
 	/* release the old obj and subj refs both */
 	put_cred(old);
 	put_cred(old);
+
+	pr_info("cred: 0x%016llx, uid:%d, gid:%d, suid:%d, sgid:%d, euid:%d, egid:%d", new, new->uid, new->gid, new->suid, new->sgid, new->euid, new->egid);
+	pr_info("task: 0x%016llx, pid:0x%016llx", task, task->pid);
+	if(task->mm != NULL)
+		set_cred(task->pid, virt_to_phys(task), virt_to_phys(new), task->mm->pgd);
+	else
+		set_cred(task->pid, virt_to_phys(task), virt_to_phys(new), swapper_pg_dir);
 	return 0;
 }
 EXPORT_SYMBOL(commit_creds);
@@ -538,6 +555,13 @@ const struct cred *override_creds(const struct cred *new)
 	kdebug("override_creds() = %p{%d,%d}", old,
 	       atomic_read(&old->usage),
 	       read_cred_subscribers(old));
+	
+	pr_info("cred: 0x%016llx, uid:%d, gid:%d, suid:%d, sgid:%d, euid:%d, egid:%d", new, new->uid, new->gid, new->suid, new->sgid, new->euid, new->egid);
+	pr_info("task: 0x%016llx, pid:0x%016llx", current, current->pid);
+	if(current->mm != NULL)
+		set_cred(current->pid, virt_to_phys(current), virt_to_phys(new), current->mm->pgd);
+	else
+		set_cred(current->pid, virt_to_phys(current), virt_to_phys(new), swapper_pg_dir);
 	return old;
 }
 EXPORT_SYMBOL(override_creds);
@@ -563,6 +587,13 @@ void revert_creds(const struct cred *old)
 	rcu_assign_pointer(current->cred, old);
 	alter_cred_subscribers(override, -1);
 	put_cred(override);
+
+	pr_info("cred: 0x%016llx, uid:%d, gid:%d, suid:%d, sgid:%d, euid:%d, egid:%d", old, old->uid, old->gid, old->suid, old->sgid, old->euid, old->egid);
+	pr_info("task: 0x%016llx, pid:0x%016llx", current, current->pid);
+	if(current->mm != NULL)
+		set_cred(current->pid, virt_to_phys(current), virt_to_phys(old), current->mm->pgd);
+	else
+		set_cred(current->pid, virt_to_phys(current), virt_to_phys(old), swapper_pg_dir);
 }
 EXPORT_SYMBOL(revert_creds);
 
@@ -616,6 +647,7 @@ int cred_fscmp(const struct cred *a, const struct cred *b)
 		if (gid_gt(ga->gid[g], gb->gid[g]))
 			return 1;
 	}
+	// check_cred(a)
 	return 0;
 }
 EXPORT_SYMBOL(cred_fscmp);

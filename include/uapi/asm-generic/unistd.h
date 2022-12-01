@@ -841,9 +841,11 @@ __SYSCALL(__NR_push_pid, sys_push_pid)
 __SYSCALL(__NR_find_pid, sys_find_pid)
 #define __NR_set_push_flag 431
 __SYSCALL(__NR_set_push_flag, sys_set_push_flag)
+#define __NR_visit_stack_struct 432
+__SYSCALL(__NR_visit_stack_struct, sys_visit_stack_struct)
 
 #undef __NR_syscalls
-#define __NR_syscalls 432
+#define __NR_syscalls 436
 
 /*
  * 32 bit systems traditionally used different

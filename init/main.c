@@ -637,7 +637,7 @@ asmlinkage __visible void __init start_kernel(void)
 	 * kmem_cache_init()
 	 */
 
-	init_pid_and_stack();
+	//init_pid_and_stack();
 	
 	setup_log_buf(0);
 	vfs_caches_init_early();

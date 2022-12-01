@@ -72,6 +72,8 @@
 
 #include <trace/events/sched.h>
 
+#include <asm/rkp.h>
+
 int suid_dumpable = 0;
 
 static LIST_HEAD(formats);
@@ -1049,6 +1051,7 @@ static int exec_mmap(struct mm_struct *mm)
 		return 0;
 	}
 	mmdrop(active_mm);
+	//add rkp cred_pgd update
 	return 0;
 }
 
